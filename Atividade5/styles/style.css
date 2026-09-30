@@ -1,0 +1,73 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f4f4f9;
+    font-family: Arial, sans-serif;
+}
+
+.texto-titulo {
+  margin-bottom: 100px;
+  color: #333;
+  font-size: 2.5rem;
+}
+
+.caixa-colorida {
+    width: 500px;
+    height: 500px;
+    max-width: 100vw; 
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+.caixa-colorida h2 {
+    color: #ffffff;
+    font-size: 2rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+}
+
+@media (max-width: 420px) {
+    .caixa-colorida { background-color: gray; }
+    .caixa-colorida h2::after { content: "Cinza (Até 420px)"; }
+}
+
+@media (min-width: 421px) and (max-width: 768px) {
+    .caixa-colorida { background-color: darkorange; }
+    .caixa-colorida h2::after { content: "Laranja (421px - 768px)"; }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .caixa-colorida { background-color: magenta; }
+    .caixa-colorida h2::after { content: "Magenta (769px - 1024px)"; }
+}
+
+@media (min-width: 1025px) and (max-width: 1080px) {
+    .caixa-colorida { background-color: indianred; }
+    .caixa-colorida h2::after { content: "Vermelho (1025px - 1080px)"; }
+}
+
+@media (min-width: 1081px) and (max-width: 1366px) {
+    .caixa-colorida { background-color: slateblue; }
+    .caixa-colorida h2::after { content: "Roxo (1081px - 1366px)"; }
+}
+
+@media (min-width: 1367px) and (max-width: 1920px) {
+    .caixa-colorida { background-color: gold; }
+    .caixa-colorida h2::after { content: "Amarelo (1367px - 1920px)"; }
+    .caixa-colorida h2 { color: #333; text-shadow: none; }
+}
+
+@media (min-width: 1921px) {
+    .caixa-colorida { background-color: forestgreen; }
+    .caixa-colorida h2::after { content: "Verde (Maior que 1920px)"; }
+}
