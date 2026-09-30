@@ -1,0 +1,162 @@
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        body {
+            background-color: #0f0f0f;
+            color: #ffffff;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #0f0f0f;
+            position: sticky;
+            top: 0;
+            border-bottom: 1px solid #272727;
+            z-index: 100;
+        }
+        .logo {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+        }
+        .logo span {
+            background-color: #ff0000;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 2px;
+        }
+        .busca {
+            display: flex;
+            width: 40%;
+        }
+        .busca input {
+            width: 100%;
+            padding: 10px 15px;
+            background-color: #121212;
+            border: 1px solid #303030;
+            border-radius: 20px 0 0 20px;
+            color: white;
+            outline: none;
+        }
+        .busca input:focus {
+            border-color: #1c62b9;
+        }
+        .busca button {
+            padding: 10px 20px;
+            background-color: #222222;
+            border: 1px solid #303030;
+            border-left: none;
+            border-radius: 0 20px 20px 0;
+            color: white;
+            cursor: pointer;
+        }
+        .busca button:hover {
+            background-color: #303030;
+        }
+        .perfil {
+            width: 35px;
+            height: 35px;
+            background-color: #065fd4;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .layout {
+            display: flex;
+            height: calc(100vh - 60px);
+        }
+
+        aside {
+            width: 220px;
+            background-color: #0f0f0f;
+            padding: 15px 10px;
+            border-right: 1px solid #272727;
+            overflow-y: auto;
+        }
+        aside nav ul {
+            list-style: none;
+        }
+        aside nav ul li {
+            padding: 10px 15px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        aside nav ul li:hover {
+            background-color: #272727;
+        }
+
+        main {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #0f0f0f;
+        }
+        .grade-videos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        article.cartao-video {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            cursor: pointer;
+        }
+        .miniatura {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background-color: #272727;
+            border-radius: 12px;
+            object-fit: cover;
+            transition: transform 0.2s;
+        }
+        article.cartao-video:hover .miniatura {
+            transform: scale(1.03);
+        }
+        .info-video {
+            display: flex;
+            gap: 12px;
+        }
+        .avatar-canal {
+            width: 36px;
+            height: 36px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .texto-video h3 {
+            font-size: 1rem;
+            margin-bottom: 6px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.3;
+        }
+        .texto-video p {
+            font-size: 0.85rem;
+            color: #aaaaaa;
+            margin-bottom: 2px;
+        }
+
+        @media (max-width: 768px) {
+            aside {
+                display: none;
+            }
+            .busca {
+                width: 50%;
+            }
+        }
