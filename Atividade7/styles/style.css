@@ -1,0 +1,46 @@
+* { 
+  box-sizing: border-box; 
+  font-family: 'Segoe UI', sans-serif; 
+}
+
+body { 
+  background-color: #f0f2f5; 
+  display: flex; 
+  justify-content: center; 
+  padding: 50px; 
+  text-align: center; 
+}
+
+.card { 
+  background-color: #fff; 
+  padding: 30px; 
+  border-radius: 8px; 
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+  width: 100%; 
+  max-width: 400px; 
+}
+
+select, button { 
+  padding: 10px; 
+  font-size: 1rem; 
+  margin-top: 10px; 
+  width: 100%; 
+  border-radius: 5px; 
+}
+
+button { 
+  background-color: #0d47a1; 
+  color: white; 
+  border: none; 
+  cursor: pointer; 
+}
+
+button:hover { 
+  background-color: #1565c0; 
+}
+
+#resultado { 
+  margin-top: 20px; 
+  font-size: 1.1rem; 
+  line-height: 1.5; 
+}

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedra, Papel ou Tesoura</title>
+  <link rel="stylesheet" href="styles/style.css">
+  <script src="scripts/script.js" defer></script>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Jokenpô (vs CPU)</h2>
+    
+    <label for="escolhaUsuario">Escolha sua jogada:</label>
+    <select id="escolhaUsuario">
+      <option value="Pedra">Pedra</option>
+      <option value="Papel">Papel</option>
+      <option value="Tesoura">Tesoura</option>
+    </select>
+
+    <button type="button" onclick="iniciarJogo()">Jogar</button>
+
+    <div id="resultado"></div>
+  </div>
+
+</body>
+</html>
