@@ -581,7 +581,7 @@
   <script>
     'use strict';
     const API_URL = '/api/contas';
-    const MAX_FILE_SIZE = 8 * 1024 * 1024;
+    const MAX_FILE_SIZE = 3 * 1024 * 1024;
     const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     const dateFormatter = new Intl.DateTimeFormat('pt-BR');
     const monthFormatter = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
@@ -992,7 +992,7 @@
       const id = state.attachmentAccountId;
       state.attachmentAccountId = null;
       if (!id || !file) return;
-      if (file.size > MAX_FILE_SIZE) return showToast('O arquivo deve ter no máximo 8 MB.', 'error');
+      if (file.size > MAX_FILE_SIZE) return showToast('O arquivo deve ter no máximo 3 MB.', 'error');
       const validTypes = [
         'application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
