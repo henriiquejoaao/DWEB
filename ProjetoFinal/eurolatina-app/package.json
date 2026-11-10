@@ -1,0 +1,15 @@
+{
+  "name": "eurolatina-contas",
+  "version": "1.0.0",
+  "description": "Sistema de Contas a Pagar - EUROLATINA",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6"
+  }
+}

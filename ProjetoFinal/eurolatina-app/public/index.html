@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#12243a">
+  <meta name="description" content="Painel de gestão de contas a pagar da Metalúrgica Usinagem EUROLATINA.">
+  <title>Contas a Pagar | Metalúrgica Usinagem EUROLATINA</title>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    :root {
+      --navy: #14283f;
+      --navy-2: #1d3857;
+      --blue: #3478bd;
+      --blue-soft: #eaf3fc;
+      --red: #c94a4a;
+      --red-soft: #fff0ef;
+      --yellow: #c18b19;
+      --yellow-soft: #fff8e6;
+      --green: #23845b;
+      --green-soft: #eaf7f0;
+      --ink: #233143;
+      --muted: #718096;
+      --line: #e2e8f0;
+      --surface: #ffffff;
+      --page: #f3f6fa;
+      --shadow: 0 8px 24px rgba(23, 42, 66, .06);
+      --radius: 13px;
+    }
+    * { box-sizing: border-box; }
+    html { min-width: 320px; }
+    body {
+      margin: 0; background: var(--page); color: var(--ink);
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      min-height: 100vh;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app-header {
+      min-height: 82px; background: var(--navy); color: white; display: flex;
+      align-items: center; justify-content: space-between; gap: 24px; padding: 13px clamp(18px, 4vw, 54px);
+      box-shadow: 0 3px 14px rgba(10, 25, 43, .17);
+    }
+    .brand { display: flex; align-items: center; gap: 15px; min-width: 0; }
+    .brand img { width: 66px; height: 54px; object-fit: contain; background: white; border-radius: 7px; padding: 3px; }
+    .brand-copy { min-width: 0; }
+    .brand-copy strong { display: block; letter-spacing: .055em; font-size: 1rem; font-weight: 750; }
+    .brand-copy span { display: block; color: #c4d1df; font-size: .8rem; margin-top: 4px; }
+    .header-right { display: flex; align-items: center; gap: 14px; color: #d5deea; font-size: .85rem; }
+    .main-nav { display: flex; align-items: center; gap: 7px; margin-left: auto; }
+    .nav-button { min-height: 40px; display: inline-flex; align-items: center; gap: 9px; border: 1px solid transparent; border-radius: 8px; padding: 9px 14px; background: transparent; color: #c8d5e3; font-size: .84rem; font-weight: 750; transition: .15s ease; }
+    .nav-button:hover { background: rgba(255,255,255,.08); color: #fff; }
+    .nav-button.active { color: #fff; background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.2); }
+    .screen-view[hidden] { display: none !important; }
+    .header-symbol { width: 39px; height: 39px; border: 1px solid rgba(255,255,255,.25); border-radius: 50%; display: grid; place-items: center; }
+    .page-wrap { width: min(1500px, 100%); margin: 0 auto; padding: 30px clamp(16px, 3vw, 42px) 40px; }
+    .page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-bottom: 22px; }
+    .eyebrow { color: var(--blue); text-transform: uppercase; font-size: .72rem; letter-spacing: .13em; font-weight: 800; margin: 0 0 7px; }
+    h1 { margin: 0; color: var(--navy); font-size: clamp(1.55rem, 2vw, 2rem); letter-spacing: -.035em; }
+    .page-subtitle { color: var(--muted); margin: 7px 0 0; font-size: .94rem; }
+    .today-label { color: #64748b; font-size: .85rem; white-space: nowrap; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 15px; margin-bottom: 22px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 17px 19px; box-shadow: var(--shadow); min-width: 0; }
+    .stat-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--muted); font-size: .78rem; font-weight: 650; }
+    .stat-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; font-size: .92rem; }
+    .stat-icon.blue { color: var(--blue); background: var(--blue-soft); }
+    .stat-icon.red { color: var(--red); background: var(--red-soft); }
+    .stat-icon.yellow { color: var(--yellow); background: var(--yellow-soft); }
+    .stat-icon.green { color: var(--green); background: var(--green-soft); }
+    .stat-value { margin-top: 12px; color: var(--navy); font-size: clamp(1.25rem, 2vw, 1.65rem); font-weight: 800; letter-spacing: -.035em; overflow-wrap: anywhere; }
+    .stat-foot { color: #8a97a8; font-size: .73rem; margin-top: 4px; }
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 14px; box-shadow: var(--shadow); margin-bottom: 20px;
+    }
+    .filters { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: 9px; min-width: 0; }
+    .field-control {
+      min-height: 40px; border: 1px solid #d7e0ea; border-radius: 8px; padding: 8px 11px;
+      color: #334155; background: #fff; outline: none; min-width: 145px;
+    }
+    .field-control:focus, .form-control:focus { border-color: #76a8db; box-shadow: 0 0 0 3px rgba(52,120,189,.12); }
+    .search-wrap { flex: 1 1 220px; min-width: 190px; position: relative; }
+    .search-wrap i { position: absolute; left: 12px; top: 13px; color: #93a0b1; font-size: .85rem; }
+    .search-wrap input { width: 100%; padding-left: 35px; }
+    .date-filter { min-width: 142px; }
+    .toolbar-actions { display: flex; gap: 9px; align-items: center; }
+    .btn { border: 1px solid transparent; min-height: 40px; border-radius: 8px; padding: 9px 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: .84rem; transition: .15s ease; white-space: nowrap; }
+    .btn-primary { background: var(--navy-2); color: #fff; }
+    .btn-primary:hover { background: #10243a; transform: translateY(-1px); }
+    .btn-secondary { color: #526276; background: #fff; border-color: #d9e1eb; }
+    .btn-secondary:hover { background: #f7f9fc; }
+    .btn-danger { background: #fff1f1; color: #b83232; border-color: #f6d1d1; }
+    .btn-danger:hover { background: #ffe5e5; }
+    .board-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 26px 2px 12px; }
+    .board-heading h2 { font-size: 1.04rem; margin: 0; color: var(--navy); }
+    .board-heading span { font-size: .78rem; color: var(--muted); }
+    .kanban-board { display: grid; grid-template-columns: repeat(3, minmax(250px, 1fr)); gap: 16px; align-items: stretch; }
+    .kanban-column { min-height: 315px; display: flex; flex-direction: column; background: #e9eef4; border: 1px solid #e1e8f0; border-radius: 12px; padding: 12px; }
+    .column-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 7px 12px; }
+    .column-title { display: flex; align-items: center; gap: 9px; font-size: .9rem; font-weight: 800; }
+    .column-title i { font-size: .82rem; }
+    .column-count { background: rgba(255,255,255,.75); border-radius: 20px; min-width: 25px; text-align: center; padding: 3px 8px; color: #526276; font-size: .75rem; font-weight: 750; }
+    .column-total { background: rgba(255,255,255,.78); border-radius: 8px; margin-top: auto; padding: 12px; display: flex; justify-content: space-between; gap: 8px; font-size: .77rem; color: #617083; }
+    .column-total strong { color: var(--navy); font-size: .88rem; }
+    .column-red .column-title { color: #b53b3b; }
+    .column-yellow .column-title { color: #93690f; }
+    .column-blue .column-title { color: #2b68a5; }
+    .card-list { display: flex; flex-direction: column; gap: 10px; padding: 0 1px 12px; }
+    .account-card { background: #fff; border: 1px solid #e1e7ef; border-left: 4px solid #cbd5e1; border-radius: 10px; padding: 13px; box-shadow: 0 3px 10px rgba(25,45,70,.045); min-width: 0; }
+    .account-card.overdue { border-left-color: var(--red); }
+    .account-card.due-today { border-left-color: #e3b43f; }
+    .account-card.upcoming { border-left-color: var(--blue); }
+    .account-card.paid { border-left-color: var(--green); background: #fbfdfc; }
+    .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .supplier-name { font-size: .91rem; font-weight: 800; line-height: 1.3; color: #23364b; overflow-wrap: anywhere; }
+    .due-date { white-space: nowrap; font-size: .73rem; color: #738196; background: #f2f5f9; border-radius: 6px; padding: 4px 6px; }
+    .card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; align-items: center; }
+    .tag { display: inline-flex; align-items: center; gap: 4px; font-size: .67rem; font-weight: 750; padding: 4px 7px; border-radius: 20px; background: #edf2f7; color: #607086; }
+    .tag.paid-tag { background: var(--green-soft); color: #18734c; }
+    .tag.overdue-tag { background: var(--red-soft); color: #b53b3b; }
+    .tag.today-tag { background: var(--yellow-soft); color: #8b6411; }
+    .card-description { color: #748195; font-size: .76rem; line-height: 1.4; margin: 9px 0 0; overflow-wrap: anywhere; }
+    .card-reference { font-size: .71rem; color: #8895a6; margin-top: 7px; }
+    .card-value { text-align: right; color: #1d2f45; font-size: 1.12rem; font-weight: 850; margin: 12px 0 10px; }
+    .account-card.paid .card-value { color: #7d8b99; text-decoration: line-through; text-decoration-thickness: 1px; }
+    .card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid #edf1f5; padding-top: 9px; }
+    .attachment-link { border: 0; background: none; color: #58718d; padding: 4px 0; font-size: .73rem; text-decoration: none; display: inline-flex; gap: 5px; align-items: center; }
+    .attachment-link:hover { color: var(--blue); text-decoration: underline; }
+    .card-actions { display: flex; justify-content: flex-end; gap: 5px; }
+    .icon-btn { width: 30px; height: 30px; border: 1px solid transparent; border-radius: 7px; color: #728197; background: transparent; display: grid; place-items: center; }
+    .icon-btn:hover { background: #f1f5f9; color: var(--navy); border-color: #e2e8f0; }
+    .icon-btn.pay:hover { color: var(--green); background: var(--green-soft); }
+    .icon-btn.edit:hover { color: #a16d0d; background: #fff8e6; }
+    .icon-btn.delete:hover { color: #bd3838; background: var(--red-soft); }
+    .empty-state { border: 1px dashed #d1dbe6; background: rgba(255,255,255,.55); border-radius: 9px; color: #8a97a8; text-align: center; padding: 23px 10px; font-size: .77rem; }
+    .empty-state i { display: block; font-size: 1.3rem; margin-bottom: 8px; color: #b5c0cd; }
+    .more-list { margin-top: 18px; background: #e9eef4; border: 1px solid #e1e8f0; border-radius: 12px; padding: 13px; }
+    .more-list .card-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); padding-top: 8px; }
+    .more-list .column-total { margin-top: 4px; }
+    .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(300px, .85fr); gap: 16px; margin-top: 18px; }
+    .dashboard-panel { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+    .dashboard-panel h2 { margin: 0; color: var(--navy); font-size: .98rem; }
+    .panel-subtitle { margin: 6px 0 16px; color: var(--muted); font-size: .76rem; }
+    .urgency-list { display: grid; gap: 11px; }
+    .urgency-item { display: grid; grid-template-columns: minmax(120px, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border-radius: 9px; background: #f7f9fc; }
+    .urgency-label { display: flex; align-items: center; gap: 9px; color: #43546a; font-size: .82rem; font-weight: 750; }
+    .urgency-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+    .urgency-item.overdue .urgency-dot { background: var(--red); }
+    .urgency-item.today .urgency-dot { background: #d7a329; }
+    .urgency-item.week .urgency-dot { background: var(--blue); }
+    .urgency-metrics { text-align: right; }
+    .urgency-metrics strong { display: block; color: var(--navy); font-size: .9rem; }
+    .urgency-metrics span { color: #8996a6; font-size: .7rem; }
+    .category-list { display: flex; flex-direction: column; gap: 13px; }
+    .category-row { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(90px, 1.4fr) auto; align-items: center; gap: 10px; }
+    .category-name { overflow: hidden; color: #58687d; font-size: .74rem; text-overflow: ellipsis; white-space: nowrap; }
+    .category-track { height: 8px; overflow: hidden; border-radius: 20px; background: #edf1f5; }
+    .category-fill { height: 100%; border-radius: inherit; background: #4b86bf; }
+    .category-value { color: #33465d; font-size: .72rem; font-weight: 750; white-space: nowrap; }
+    .recent-table-wrap { overflow-x: auto; margin: 0 -4px; }
+    .recent-table { width: 100%; border-collapse: collapse; min-width: 430px; }
+    .recent-table th { padding: 10px 9px; text-align: left; color: #8a97a8; font-size: .68rem; font-weight: 750; text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid #edf1f5; }
+    .recent-table td { padding: 11px 9px; color: #526276; font-size: .76rem; border-bottom: 1px solid #f0f3f7; }
+    .recent-table tr:last-child td { border-bottom: 0; }
+    .recent-table td:first-child { color: #2f435a; font-weight: 750; }
+    .recent-value { text-align: right; white-space: nowrap; font-weight: 750; }
+    .recent-status { display: inline-flex; padding: 4px 7px; border-radius: 20px; background: #fff7e5; color: #986c12; font-size: .66rem; font-weight: 750; white-space: nowrap; }
+    .recent-status.paid { background: var(--green-soft); color: #18734c; }
+    .dashboard-empty { padding: 24px 12px; text-align: center; color: #98a4b3; font-size: .78rem; }
+    .dashboard-empty i { display: block; margin-bottom: 8px; font-size: 1.25rem; }
+    .dashboard-panel-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 13px; }
+    .dashboard-link { border: 0; background: transparent; color: var(--blue); padding: 5px; font-size: .74rem; font-weight: 750; }
+    .dashboard-link:hover { text-decoration: underline; }
+    .page-heading-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+
+    /* Agenda financeira mensal */
+    .calendar-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 4px 0 17px; }
+    .calendar-summary-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px; background: #fff; border: 1px solid var(--line); border-radius: 11px; box-shadow: var(--shadow); min-width: 0; }
+    .calendar-summary-label { display: block; color: var(--muted); font-size: .73rem; font-weight: 700; }
+    .calendar-summary-value { display: block; margin-top: 5px; color: var(--navy); font-size: 1.04rem; font-weight: 850; overflow-wrap: anywhere; }
+    .calendar-summary-icon { width: 35px; height: 35px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 10px; background: var(--blue-soft); color: var(--blue); }
+    .calendar-summary-card.paid .calendar-summary-icon { background: var(--green-soft); color: var(--green); }
+    .calendar-layout { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(290px, .85fr); gap: 16px; align-items: start; }
+    .calendar-panel, .selected-day-panel { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .calendar-panel { padding: 17px; }
+    .calendar-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .calendar-month-title { margin: 0; color: var(--navy); text-transform: capitalize; font-size: 1.15rem; font-weight: 850; }
+    .calendar-controls { display: flex; align-items: center; gap: 7px; }
+    .calendar-controls .btn { min-height: 35px; padding: 7px 10px; font-size: .76rem; }
+    .calendar-arrow { width: 35px; min-width: 35px; padding: 0 !important; }
+    .calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .calendar-weekdays { border-bottom: 1px solid #e9eef4; padding-bottom: 8px; }
+    .calendar-weekdays span { text-align: center; color: #8996a6; text-transform: uppercase; font-size: .65rem; font-weight: 850; letter-spacing: .045em; }
+    .calendar-grid { border-left: 1px solid #edf1f5; border-top: 1px solid #edf1f5; }
+    .calendar-day { position: relative; min-width: 0; min-height: 112px; padding: 8px 7px 7px; text-align: left; vertical-align: top; border: 0; border-right: 1px solid #edf1f5; border-bottom: 1px solid #edf1f5; border-radius: 0; background: #fff; color: var(--ink); transition: background .12s ease, box-shadow .12s ease; }
+    .calendar-day:hover { background: #f7faff; }
+    .calendar-day:focus-visible { outline: 2px solid var(--blue); outline-offset: -3px; z-index: 1; }
+    .calendar-day.outside { background: #fafbfd; color: #b6c0cc; }
+    .calendar-day.selected { background: #f1f7fd; box-shadow: inset 0 0 0 2px #5d94c8; }
+    .calendar-day.today .day-number { background: var(--navy-2); color: #fff; }
+    .day-number { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; color: #526276; font-size: .76rem; font-weight: 800; }
+    .calendar-day.outside .day-number { color: #aeb8c5; }
+    .day-events { display: flex; flex-direction: column; gap: 4px; margin-top: 5px; }
+    .day-event { display: block; overflow: hidden; padding: 4px 5px; border-radius: 5px; font-size: .62rem; line-height: 1.25; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+    .day-event.overdue { color: #a83b3b; background: #fff0ef; }
+    .day-event.today { color: #87600e; background: #fff6df; }
+    .day-event.upcoming { color: #28649d; background: #eaf3fc; }
+    .day-event.paid { color: #18734c; background: #eaf7f0; }
+    .day-more { color: #7d8a9b; font-size: .61rem; font-weight: 750; padding: 2px 4px; }
+    .day-total { display: block; margin-top: 5px; color: #596b80; font-size: .62rem; font-weight: 850; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .calendar-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 13px; color: #788699; font-size: .69rem; }
+    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .legend-dot.overdue { background: var(--red); }
+    .legend-dot.today { background: #d7a329; }
+    .legend-dot.upcoming { background: var(--blue); }
+    .legend-dot.paid { background: var(--green); }
+    .selected-day-panel { padding: 17px; }
+    .selected-day-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding-bottom: 13px; border-bottom: 1px solid #edf1f5; }
+    .selected-day-heading h2 { margin: 0; color: var(--navy); font-size: .98rem; text-transform: capitalize; }
+    .selected-day-heading p { margin: 5px 0 0; color: var(--muted); font-size: .7rem; }
+    .selected-day-total { text-align: right; white-space: nowrap; }
+    .selected-day-total strong { display: block; color: var(--navy); font-size: .96rem; }
+    .selected-day-total span { display: block; color: #8a97a8; font-size: .65rem; margin-top: 3px; }
+    .selected-day-list { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+    .selected-day-list .account-card { padding: 11px; }
+    .selected-day-list .card-bottom { align-items: flex-end; flex-wrap: wrap; }
+    .selected-day-list .card-actions { flex-wrap: wrap; }
+    .calendar-empty { padding: 28px 10px; text-align: center; color: #97a3b2; font-size: .77rem; }
+    .calendar-empty i { display: block; margin-bottom: 8px; font-size: 1.35rem; color: #b7c2ce; }
+
+    .app-footer { padding: 18px clamp(18px, 4vw, 54px); border-top: 1px solid #e0e7ef; background: #fff; display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #8390a0; font-size: .75rem; }
+    .app-footer img { width: 88px; max-height: 45px; object-fit: contain; }
+    .footer-note { text-align: right; }
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(13,27,43,.58); padding: 20px; overflow-y: auto; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { width: min(590px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; background: white; border-radius: 15px; box-shadow: 0 20px 70px rgba(7,20,35,.28); }
+    .modal-header { padding: 21px 24px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .modal-header h2 { margin: 0; color: var(--navy); font-size: 1.2rem; }
+    .modal-header p { margin: 5px 0 0; color: var(--muted); font-size: .8rem; }
+    .modal-close { width: 32px; height: 32px; border: 0; border-radius: 8px; background: #f2f5f8; color: #66758a; }
+    .modal-body { padding: 20px 24px 24px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .form-group { min-width: 0; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { display: block; font-weight: 750; color: #415268; font-size: .79rem; margin-bottom: 6px; }
+    .form-control { width: 100%; border: 1px solid #d7e0ea; border-radius: 8px; padding: 10px 11px; outline: none; background: #fff; color: var(--ink); min-height: 41px; }
+    textarea.form-control { min-height: 84px; resize: vertical; }
+    .help-text { color: #8a97a8; font-size: .7rem; margin-top: 5px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+    .toast-region { position: fixed; top: 18px; right: 18px; z-index: 60; display: flex; flex-direction: column; gap: 8px; width: min(370px, calc(100vw - 36px)); }
+    .toast { padding: 12px 14px; border-radius: 9px; color: white; background: #263d56; box-shadow: 0 8px 24px rgba(0,0,0,.18); font-size: .82rem; animation: toast-in .18s ease-out; }
+    .toast.success { background: #21734f; }
+    .toast.error { background: #b63d3d; }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    .loading-bar { display: none; height: 3px; background: linear-gradient(90deg, #3478bd 0 35%, #9fc4e8 50%, #3478bd 65%); background-size: 200% 100%; animation: loading 1s linear infinite; margin: -20px 0 18px; border-radius: 3px; }
+    .loading .loading-bar { display: block; }
+    @keyframes loading { to { background-position: -200% 0; } }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 1050px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .calendar-layout { grid-template-columns: 1fr; }
+      .toolbar { align-items: flex-start; flex-direction: column; }
+      .toolbar-actions { width: 100%; justify-content: flex-end; }
+      .filters { width: 100%; }
+      .kanban-board { grid-template-columns: repeat(3, minmax(225px, 1fr)); overflow-x: auto; padding-bottom: 5px; }
+    }
+    @media (max-width: 760px) {
+      .app-header { flex-wrap: wrap; gap: 10px; }
+      .main-nav { order: 3; width: 100%; margin-left: 0; }
+      .nav-button { flex: 1; justify-content: center; }
+      .header-right { margin-left: auto; }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .page-heading { align-items: flex-start; flex-direction: column; }
+      .kanban-board { grid-template-columns: 1fr; overflow: visible; }
+      .kanban-column { min-height: 180px; }
+      .calendar-day { min-height: 92px; padding: 6px 4px; }
+      .day-event { font-size: .57rem; padding: 3px 4px; }
+      .header-right .header-date { display: none; }
+      .app-footer { align-items: flex-start; }
+    }
+    @media (max-width: 480px) {
+      .app-header { padding: 11px 14px; }
+      .nav-button { min-height: 38px; padding: 8px 10px; font-size: .78rem; }
+      .brand img { width: 52px; height: 44px; }
+      .brand-copy strong { font-size: .78rem; }
+      .brand-copy span { font-size: .68rem; }
+      .page-wrap { padding: 22px 12px 30px; }
+      .stat-card { padding: 13px; }
+      .stat-value { font-size: 1.16rem; }
+      .filters { display: grid; grid-template-columns: 1fr 1fr; }
+      .search-wrap { grid-column: 1 / -1; min-width: 0; }
+      .field-control, .date-filter { min-width: 0; width: 100%; }
+      .toolbar-actions { justify-content: stretch; }
+      .toolbar-actions .btn { flex: 1; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full { grid-column: auto; }
+      .modal-header, .modal-body { padding-left: 17px; padding-right: 17px; }
+      .app-footer img { width: 68px; }
+      .urgency-item { grid-template-columns: 1fr auto; }
+      .category-row { grid-template-columns: minmax(85px, 1fr) minmax(55px, 1fr) auto; gap: 7px; }
+      .calendar-summary { grid-template-columns: 1fr; gap: 8px; }
+      .calendar-summary-card { padding: 10px 12px; }
+      .calendar-panel, .selected-day-panel { padding: 11px; }
+      .calendar-toolbar { align-items: flex-start; flex-direction: column; }
+      .calendar-controls { width: 100%; }
+      .calendar-controls .btn:nth-child(2) { flex: 1; }
+      .calendar-day { min-height: 75px; padding: 4px 2px; }
+      .day-number { width: 22px; height: 22px; font-size: .68rem; }
+      .day-events { gap: 2px; margin-top: 3px; }
+      .day-event { font-size: .52rem; padding: 2px 3px; }
+      .day-total { font-size: .52rem; }
+      .calendar-weekdays span { font-size: .56rem; }
+      .selected-day-heading { flex-direction: column; }
+      .selected-day-total { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <img src="/logo-eurolatina.jpeg" alt="Logotipo da Eurolatina">
+      <div class="brand-copy">
+        <strong>METALÚRGICA USINAGEM EUROLATINA</strong>
+        <span>Gestão financeira · Contas a pagar</span>
+      </div>
+    </div>
+    <nav class="main-nav" aria-label="Navegação principal">
+      <button class="nav-button active" id="nav-dashboard" type="button" onclick="navegarPara('dashboard')" aria-current="page"><i class="fa-solid fa-chart-line"></i> Dashboard</button>
+      <button class="nav-button" id="nav-contas" type="button" onclick="navegarPara('contas')"><i class="fa-regular fa-calendar-days"></i> Agenda</button>
+    </nav>
+    <div class="header-right">
+      <span class="header-date" id="header-date"></span>
+      <span class="header-symbol" aria-hidden="true"><i class="fa-solid fa-industry"></i></span>
+    </div>
+  </header>
+
+  <main class="page-wrap" id="main-content">
+    <div class="loading-bar" aria-hidden="true"></div>
+
+    <!-- TELA 1: DASHBOARD -->
+    <section class="screen-view" id="view-dashboard">
+      <section class="page-heading">
+        <div>
+          <p class="eyebrow">EUROLATINA / Gestão financeira</p>
+          <h1>Dashboard financeiro</h1>
+          <p class="page-subtitle">Visão geral das obrigações financeiras e dos compromissos com fornecedores.</p>
+        </div>
+        <div class="page-heading-actions">
+          <div class="today-label"><i class="fa-regular fa-calendar"></i> <span id="today-dashboard"></span></div>
+          <button class="btn btn-primary" type="button" onclick="abrirCadastroPelaDashboard()"><i class="fa-solid fa-plus"></i> Nova conta</button>
+        </div>
+      </section>
+
+      <section class="stats-grid" aria-label="Indicadores financeiros">
+        <article class="stat-card">
+          <div class="stat-top"><span>Total em aberto</span><span class="stat-icon blue"><i class="fa-solid fa-wallet"></i></span></div>
+          <div class="stat-value" id="stat-open">R$ 0,00</div>
+          <div class="stat-foot" id="stat-open-foot">0 contas pendentes</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-top"><span>Contas vencidas</span><span class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></span></div>
+          <div class="stat-value" id="stat-overdue">R$ 0,00</div>
+          <div class="stat-foot" id="stat-overdue-foot">0 contas em atraso</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-top"><span>Próximos 7 dias</span><span class="stat-icon yellow"><i class="fa-regular fa-clock"></i></span></div>
+          <div class="stat-value" id="stat-week">R$ 0,00</div>
+          <div class="stat-foot">Vencimentos de hoje até 7 dias</div>
+        </article>
+        <article class="stat-card">
+          <div class="stat-top"><span>Liquidadas no mês</span><span class="stat-icon green"><i class="fa-solid fa-circle-check"></i></span></div>
+          <div class="stat-value" id="stat-paid">R$ 0,00</div>
+          <div class="stat-foot" id="stat-paid-foot">0 pagamentos registrados</div>
+        </article>
+      </section>
+
+      <section class="dashboard-grid" aria-label="Resumo e atividade financeira">
+        <article class="dashboard-panel">
+          <div class="dashboard-panel-header">
+            <h2><i class="fa-solid fa-calendar-check"></i> Agenda de vencimentos</h2>
+            <button class="dashboard-link" type="button" onclick="navegarPara('contas')">Abrir agenda <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+          <p class="panel-subtitle">Compromissos em aberto organizados por urgência.</p>
+          <div class="urgency-list" id="dashboard-urgency"></div>
+        </article>
+
+        <article class="dashboard-panel">
+          <div class="dashboard-panel-header"><h2><i class="fa-solid fa-chart-pie"></i> Despesas por categoria</h2></div>
+          <p class="panel-subtitle">Distribuição dos valores atualmente em aberto.</p>
+          <div class="category-list" id="dashboard-categories"></div>
+        </article>
+
+        <article class="dashboard-panel" style="grid-column:1 / -1">
+          <div class="dashboard-panel-header">
+            <h2><i class="fa-solid fa-clock-rotate-left"></i> Contas recentes</h2>
+            <button class="dashboard-link" type="button" onclick="navegarPara('contas')">Abrir agenda <i class="fa-solid fa-arrow-right"></i></button>
+          </div>
+          <p class="panel-subtitle">Últimos lançamentos registrados no financeiro da EUROLATINA.</p>
+          <div class="recent-table-wrap">
+            <table class="recent-table">
+              <thead><tr><th>Fornecedor</th><th>Vencimento</th><th>Status</th><th style="text-align:right">Valor</th></tr></thead>
+              <tbody id="dashboard-recent"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </section>
+
+    <!-- TELA 2: CONTAS -->
+    <section class="screen-view" id="view-contas" hidden>
+      <section class="page-heading">
+        <div>
+          <p class="eyebrow">Financeiro / Obrigações</p>
+          <h1>Agenda de contas</h1>
+          <p class="page-subtitle">Visualize os vencimentos mês a mês e acompanhe os pagamentos dos fornecedores.</p>
+        </div>
+        <div class="today-label"><i class="fa-regular fa-calendar"></i> <span id="today-contas"></span></div>
+      </section>
+
+      <section class="toolbar" aria-label="Filtros das contas">
+        <div class="filters">
+          <label class="search-wrap">
+            <span class="visually-hidden">Buscar conta</span>
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input class="field-control" id="filter-search" type="search" placeholder="Fornecedor, descrição ou documento..." autocomplete="off">
+          </label>
+          <label>
+            <span class="visually-hidden">Status</span>
+            <select class="field-control" id="filter-status">
+              <option value="todos">Todos os status</option>
+              <option value="pendente">Em aberto</option>
+              <option value="liquidada">Liquidadas</option>
+            </select>
+          </label>
+          <label>
+            <span class="visually-hidden">Categoria</span>
+            <select class="field-control" id="filter-category">
+              <option value="todas">Todas as categorias</option>
+              <option>Matéria-prima</option>
+              <option>Ferramentas e insumos</option>
+              <option>Manutenção industrial</option>
+              <option>Energia e utilidades</option>
+              <option>Serviços terceirizados</option>
+              <option>Fretes e logística</option>
+              <option>Impostos e taxas</option>
+              <option>Despesas administrativas</option>
+              <option>Outros</option>
+            </select>
+          </label>
+          <label><span class="visually-hidden">Vencimento a partir de</span><input class="field-control date-filter" id="filter-from" type="date" title="Vencimento a partir de"></label>
+          <label><span class="visually-hidden">Vencimento até</span><input class="field-control date-filter" id="filter-to" type="date" title="Vencimento até"></label>
+        </div>
+        <div class="toolbar-actions">
+          <button class="btn btn-secondary" type="button" onclick="limparFiltros()" title="Limpar filtros"><i class="fa-solid fa-filter-circle-xmark"></i><span>Limpar</span></button>
+          <button class="btn btn-primary" type="button" onclick="abrirModalNova()"><i class="fa-solid fa-plus"></i><span>Nova conta</span></button>
+        </div>
+      </section>
+
+      <div class="board-heading">
+        <h2><i class="fa-regular fa-calendar-days"></i> Agenda de vencimentos</h2>
+        <span id="result-count">0 contas encontradas</span>
+      </div>
+
+      <section class="calendar-summary" aria-label="Resumo do mês selecionado">
+        <article class="calendar-summary-card">
+          <div><span class="calendar-summary-label">Contas no mês</span><strong class="calendar-summary-value" id="calendar-month-count">0</strong></div>
+          <span class="calendar-summary-icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>
+        </article>
+        <article class="calendar-summary-card">
+          <div><span class="calendar-summary-label">Em aberto no mês</span><strong class="calendar-summary-value" id="calendar-month-open">R$ 0,00</strong></div>
+          <span class="calendar-summary-icon"><i class="fa-solid fa-wallet"></i></span>
+        </article>
+        <article class="calendar-summary-card paid">
+          <div><span class="calendar-summary-label">Liquidadas no mês</span><strong class="calendar-summary-value" id="calendar-month-paid">R$ 0,00</strong></div>
+          <span class="calendar-summary-icon"><i class="fa-solid fa-circle-check"></i></span>
+        </article>
+      </section>
+
+      <section class="calendar-layout" aria-label="Agenda mensal de contas a pagar">
+        <div class="calendar-panel">
+          <div class="calendar-toolbar">
+            <h2 class="calendar-month-title" id="calendar-month-title">Mês / Ano</h2>
+            <div class="calendar-controls">
+              <button class="btn btn-secondary calendar-arrow" type="button" onclick="mudarMes(-1)" aria-label="Mês anterior" title="Mês anterior"><i class="fa-solid fa-chevron-left"></i></button>
+              <button class="btn btn-secondary" type="button" onclick="irParaHoje()"><i class="fa-regular fa-calendar-check"></i> Hoje</button>
+              <button class="btn btn-secondary calendar-arrow" type="button" onclick="mudarMes(1)" aria-label="Próximo mês" title="Próximo mês"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+          </div>
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span>
+          </div>
+          <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="Calendário mensal"></div>
+          <div class="calendar-legend" aria-label="Legenda do calendário">
+            <span class="legend-item"><i class="legend-dot overdue"></i> Vencida</span>
+            <span class="legend-item"><i class="legend-dot today"></i> Vence hoje</span>
+            <span class="legend-item"><i class="legend-dot upcoming"></i> A vencer</span>
+            <span class="legend-item"><i class="legend-dot paid"></i> Liquidada</span>
+          </div>
+        </div>
+
+        <aside class="selected-day-panel" aria-live="polite">
+          <div class="selected-day-heading">
+            <div><h2 id="selected-day-title">Contas do dia</h2><p id="selected-day-subtitle">Selecione uma data no calendário.</p></div>
+            <div class="selected-day-total"><strong id="selected-day-total">R$ 0,00</strong><span id="selected-day-count">0 contas</span></div>
+          </div>
+          <div class="selected-day-list" id="selected-day-list">
+            <div class="calendar-empty"><i class="fa-regular fa-calendar"></i>Selecione um dia para consultar as contas.</div>
+          </div>
+        </aside>
+      </section>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <div><strong>EUROLATINA</strong> · Metalúrgica Usinagem</div>
+    <div class="footer-note">Sistema acadêmico · Análise e Desenvolvimento de Sistemas<br>Fatec Sorocaba</div>
+    <img src="/logo-fatec.png" alt="Logotipo da Fatec Sorocaba">
+  </footer>
+
+  <!-- Cadastro e edição -->
+  <div class="modal-overlay" id="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
+    <div class="modal">
+      <div class="modal-header">
+        <div><h2 id="account-modal-title">Cadastrar conta</h2><p>Preencha os dados da obrigação financeira.</p></div>
+        <button class="modal-close" type="button" aria-label="Fechar" onclick="fecharModal()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="account-form" onsubmit="salvarConta(event)">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="supplier">Fornecedor *</label>
+              <input class="form-control" id="supplier" name="fornecedor" maxlength="120" placeholder="Ex.: Aços e Metais Sorocaba Ltda." required>
+            </div>
+            <div class="form-group">
+              <label for="due-date">Data de vencimento *</label>
+              <input class="form-control" id="due-date" name="data_vencimento" type="date" required>
+            </div>
+            <div class="form-group">
+              <label for="amount">Valor (R$) *</label>
+              <input class="form-control" id="amount" name="valor" type="number" min="0.01" max="999999999" step="0.01" placeholder="0,00" required>
+            </div>
+            <div class="form-group">
+              <label for="category">Categoria</label>
+              <select class="form-control" id="category" name="categoria">
+                <option>Matéria-prima</option>
+                <option>Ferramentas e insumos</option>
+                <option>Manutenção industrial</option>
+                <option>Energia e utilidades</option>
+                <option>Serviços terceirizados</option>
+                <option>Fretes e logística</option>
+                <option>Impostos e taxas</option>
+                <option>Despesas administrativas</option>
+                <option selected>Outros</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="document-number">Nº da nota / documento</label>
+              <input class="form-control" id="document-number" name="numero_documento" maxlength="80" placeholder="Ex.: NF 000123">
+            </div>
+            <div class="form-group full">
+              <label for="description">Descrição / observações</label>
+              <textarea class="form-control" id="description" name="descricao" maxlength="500" placeholder="Ex.: Compra de ferramentas para o centro de usinagem CNC."></textarea>
+              <div class="help-text">Máximo de 500 caracteres.</div>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-secondary" type="button" onclick="fecharModal()">Cancelar</button>
+            <button class="btn btn-primary" id="save-account-btn" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar conta</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <input class="visually-hidden" type="file" id="attachment-input" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,application/pdf,image/jpeg,image/png,image/webp">
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    'use strict';
+    const API_URL = '/api/contas';
+    const MAX_FILE_SIZE = 8 * 1024 * 1024;
+    const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const dateFormatter = new Intl.DateTimeFormat('pt-BR');
+    const monthFormatter = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
+    const state = { contas: [], editingId: null, attachmentAccountId: null, loading: false, activeScreen: 'dashboard', calendarMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1), selectedDate: localISODate() };
+
+    function localISODate(date = new Date()) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    function dateFromISO(value) {
+      if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+      const [year, month, day] = value.split('-').map(Number);
+      return new Date(year, month - 1, day, 12, 0, 0);
+    }
+    function formatDate(value) {
+      const date = dateFromISO(value);
+      return date ? dateFormatter.format(date) : '—';
+    }
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      })[char]);
+    }
+    function showToast(message, type = 'success') {
+      const region = document.getElementById('toast-region');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      region.appendChild(toast);
+      window.setTimeout(() => toast.remove(), 4200);
+    }
+    async function apiRequest(url, options = {}) {
+      const response = await fetch(url, options);
+      const contentType = response.headers.get('content-type') || '';
+      const payload = contentType.includes('application/json') ? await response.json() : null;
+      if (!response.ok) throw new Error(payload?.error || `Não foi possível concluir a operação (${response.status}).`);
+      return payload;
+    }
+    function setLoading(active) {
+      state.loading = active;
+      document.getElementById('main-content').classList.toggle('loading', active);
+    }
+    async function carregarContas() {
+      setLoading(true);
+      try {
+        // O Dashboard sempre recebe a base completa; os filtros são aplicados apenas na Agenda.
+        const contas = await apiRequest(API_URL);
+        state.contas = Array.isArray(contas) ? contas : [];
+        renderizar();
+      } catch (error) {
+        showToast(error.message || 'Erro ao carregar contas.', 'error');
+        setText('result-count', 'Falha ao carregar dados');
+      } finally {
+        setLoading(false);
+      }
+    }
+    function obterContasFiltradas() {
+      const search = document.getElementById('filter-search').value.trim().toLocaleLowerCase('pt-BR');
+      const status = document.getElementById('filter-status').value;
+      const category = document.getElementById('filter-category').value;
+      const from = document.getElementById('filter-from').value;
+      const to = document.getElementById('filter-to').value;
+      return state.contas.filter((account) => {
+        const searchable = [account.fornecedor, account.descricao, account.numero_documento].join(' ').toLocaleLowerCase('pt-BR');
+        if (search && !searchable.includes(search)) return false;
+        if (status !== 'todos' && account.status !== status) return false;
+        if (category !== 'todas' && (account.categoria || 'Outros') !== category) return false;
+        if (from && account.data_vencimento < from) return false;
+        if (to && account.data_vencimento > to) return false;
+        return true;
+      });
+    }
+    function renderizar() {
+      const today = localISODate();
+      const limit = localISODate(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 7));
+      let openTotal = 0, overdueTotal = 0, paidMonthTotal = 0, openCount = 0, overdueCount = 0, paidMonthCount = 0;
+      const monthPrefix = today.slice(0, 7);
+
+      // Indicadores consolidados: usam todas as contas, sem depender dos filtros da Agenda.
+      for (const account of state.contas) {
+        const isPaid = account.status === 'liquidada';
+        const value = Number(account.valor) || 0;
+        if (isPaid) {
+          if ((account.data_liquidacao || '').startsWith(monthPrefix)) {
+            paidMonthTotal += value;
+            paidMonthCount += 1;
+          }
+        } else {
+          openTotal += value;
+          openCount += 1;
+          if (account.data_vencimento < today) {
+            overdueTotal += value;
+            overdueCount += 1;
+          }
+        }
+      }
+
+      setText('stat-open', money.format(openTotal));
+      setText('stat-open-foot', `${openCount} ${openCount === 1 ? 'conta pendente' : 'contas pendentes'}`);
+      setText('stat-overdue', money.format(overdueTotal));
+      setText('stat-overdue-foot', `${overdueCount} ${overdueCount === 1 ? 'conta em atraso' : 'contas em atraso'}`);
+      setText('stat-week', money.format(state.contas.filter((account) => account.status !== 'liquidada' && account.data_vencimento >= today && account.data_vencimento <= limit).reduce((sum, account) => sum + (Number(account.valor) || 0), 0)));
+      setText('stat-paid', money.format(paidMonthTotal));
+      setText('stat-paid-foot', `${paidMonthCount} ${paidMonthCount === 1 ? 'pagamento registrado' : 'pagamentos registrados'} em ${monthFormatter.format(new Date())}`);
+
+      const filteredAccounts = obterContasFiltradas();
+      setText('result-count', `${filteredAccounts.length} ${filteredAccounts.length === 1 ? 'conta encontrada' : 'contas encontradas'}`);
+      renderizarCalendario(filteredAccounts);
+      renderizarDashboard(today, limit);
+    }
+
+    function formatMonth(date) {
+      return monthFormatter.format(date).replace(/^./, (letter) => letter.toLocaleUpperCase('pt-BR'));
+    }
+
+    function mudarMes(offset) {
+      const current = state.calendarMonth;
+      state.calendarMonth = new Date(current.getFullYear(), current.getMonth() + offset, 1);
+      state.selectedDate = localISODate(state.calendarMonth);
+      renderizarCalendario(obterContasFiltradas());
+    }
+
+    function irParaHoje() {
+      const today = new Date();
+      state.calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      state.selectedDate = localISODate(today);
+      renderizarCalendario(obterContasFiltradas());
+    }
+
+    function selecionarDia(dateISO) {
+      state.selectedDate = dateISO;
+      const picked = dateFromISO(dateISO);
+      if (picked) state.calendarMonth = new Date(picked.getFullYear(), picked.getMonth(), 1);
+      renderizarCalendario(obterContasFiltradas());
+    }
+
+    function renderizarCalendario(accounts) {
+      const month = state.calendarMonth;
+      const year = month.getFullYear();
+      const monthIndex = month.getMonth();
+      const monthKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+      const today = localISODate();
+      const firstDay = new Date(year, monthIndex, 1);
+      const mondayOffset = (firstDay.getDay() + 6) % 7;
+      const gridStart = new Date(year, monthIndex, 1 - mondayOffset);
+      const visibleDays = Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + index);
+        return { date, iso: localISODate(date), inMonth: date.getMonth() === monthIndex };
+      });
+
+      const byDate = new Map();
+      for (const account of accounts) {
+        const key = account.data_vencimento;
+        if (!byDate.has(key)) byDate.set(key, []);
+        byDate.get(key).push(account);
+      }
+      for (const list of byDate.values()) list.sort((a, b) => (a.status === b.status ? (Number(a.id) - Number(b.id)) : a.status === 'pendente' ? -1 : 1));
+
+      const monthAccounts = accounts.filter((account) => String(account.data_vencimento || '').startsWith(monthKey));
+      const monthOpen = monthAccounts.filter((account) => account.status !== 'liquidada');
+      const monthPaid = monthAccounts.filter((account) => account.status === 'liquidada');
+      const sum = (items) => items.reduce((total, account) => total + (Number(account.valor) || 0), 0);
+
+      setText('calendar-month-title', formatMonth(month));
+      setText('calendar-month-count', monthAccounts.length.toLocaleString('pt-BR'));
+      setText('calendar-month-open', money.format(sum(monthOpen)));
+      setText('calendar-month-paid', money.format(sum(monthPaid)));
+
+      const grid = document.getElementById('calendar-grid');
+      grid.innerHTML = visibleDays.map(({ date, iso, inMonth }) => {
+        const dayAccounts = byDate.get(iso) || [];
+        const openForDay = dayAccounts.filter((account) => account.status !== 'liquidada');
+        const dayTotal = sum(openForDay);
+        const eventLabels = dayAccounts.slice(0, 3).map((account) => {
+          const paid = account.status === 'liquidada';
+          const eventClass = paid ? 'paid' : iso < today ? 'overdue' : iso === today ? 'today' : 'upcoming';
+          const label = `${account.fornecedor} · ${money.format(Number(account.valor) || 0)}`;
+          return `<span class="day-event ${eventClass}" title="${escapeHtml(label)}">${escapeHtml(account.fornecedor)}</span>`;
+        }).join('');
+        const remaining = dayAccounts.length > 3 ? `<span class="day-more">+${dayAccounts.length - 3} mais</span>` : '';
+        const totalLabel = openForDay.length ? `<span class="day-total">${money.format(dayTotal)}</span>` : '';
+        const classes = ['calendar-day', inMonth ? '' : 'outside', iso === today ? 'today' : '', iso === state.selectedDate ? 'selected' : ''].filter(Boolean).join(' ');
+        const aria = `${dateFormatter.format(date)}: ${dayAccounts.length} ${dayAccounts.length === 1 ? 'conta' : 'contas'}`;
+        return `<button type="button" class="${classes}" role="gridcell" aria-label="${escapeHtml(aria)}" aria-pressed="${iso === state.selectedDate}" onclick="selecionarDia('${iso}')"><span class="day-number">${date.getDate()}</span><span class="day-events">${eventLabels}${remaining}</span>${totalLabel}</button>`;
+      }).join('');
+
+      renderizarContasDoDia(byDate.get(state.selectedDate) || [], state.selectedDate);
+    }
+
+    function renderizarContasDoDia(accounts, selectedDate) {
+      const date = dateFromISO(selectedDate);
+      setText('selected-day-title', date ? `Contas de ${new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(date)}` : 'Contas do dia');
+      const pending = accounts.filter((account) => account.status !== 'liquidada');
+      const pendingTotal = pending.reduce((sum, account) => sum + (Number(account.valor) || 0), 0);
+      const paidTotal = accounts.filter((account) => account.status === 'liquidada').reduce((sum, account) => sum + (Number(account.valor) || 0), 0);
+      setText('selected-day-total', money.format(pendingTotal));
+      setText('selected-day-count', `${accounts.length} ${accounts.length === 1 ? 'conta' : 'contas'} · ${money.format(paidTotal)} pagos`);
+      setText('selected-day-subtitle', `${pending.length} em aberto · ${accounts.length - pending.length} liquidadas`);
+      renderList('selected-day-list', accounts, 'Nenhuma conta com vencimento nesta data.');
+    }
+
+    function renderizarDashboard(today, limit) {
+      const openAccounts = state.contas.filter((account) => account.status !== 'liquidada');
+      const overdue = openAccounts.filter((account) => account.data_vencimento < today);
+      const dueToday = openAccounts.filter((account) => account.data_vencimento === today);
+      const upcoming = openAccounts.filter((account) => account.data_vencimento > today && account.data_vencimento <= limit);
+      const sum = (items) => items.reduce((total, account) => total + (Number(account.valor) || 0), 0);
+      document.getElementById('dashboard-urgency').innerHTML = [
+        { key: 'overdue', label: 'Vencidas', items: overdue, value: sum(overdue) },
+        { key: 'today', label: 'Vencem hoje', items: dueToday, value: sum(dueToday) },
+        { key: 'week', label: 'Próximos 7 dias', items: upcoming, value: sum(upcoming) }
+      ].map((item) => `<div class="urgency-item ${item.key}"><div class="urgency-label"><span class="urgency-dot"></span>${item.label}</div><div class="urgency-metrics"><strong>${money.format(item.value)}</strong><span>${item.items.length} ${item.items.length === 1 ? 'conta' : 'contas'}</span></div></div>`).join('');
+
+      const categories = new Map();
+      for (const account of openAccounts) {
+        const label = account.categoria || 'Outros';
+        categories.set(label, (categories.get(label) || 0) + (Number(account.valor) || 0));
+      }
+      const categoryEntries = [...categories.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+      const maxCategory = Math.max(1, ...categoryEntries.map((entry) => entry[1]));
+      document.getElementById('dashboard-categories').innerHTML = categoryEntries.length
+        ? categoryEntries.map(([label, value]) => `<div class="category-row"><span class="category-name" title="${escapeHtml(label)}">${escapeHtml(label)}</span><div class="category-track"><div class="category-fill" style="width:${Math.max(2, (value / maxCategory) * 100)}%"></div></div><span class="category-value">${money.format(value)}</span></div>`).join('')
+        : '<div class="dashboard-empty"><i class="fa-solid fa-chart-pie"></i>Nenhuma despesa em aberto para exibir.</div>';
+
+      const recent = [...state.contas].sort((a, b) => {
+        const dateA = String(a.data_criacao || '').slice(0, 10);
+        const dateB = String(b.data_criacao || '').slice(0, 10);
+        return dateB.localeCompare(dateA) || Number(b.id) - Number(a.id);
+      }).slice(0, 6);
+      document.getElementById('dashboard-recent').innerHTML = recent.length
+        ? recent.map((account) => {
+            const paid = account.status === 'liquidada';
+            return `<tr><td>${escapeHtml(account.fornecedor)}</td><td>${formatDate(account.data_vencimento)}</td><td><span class="recent-status ${paid ? 'paid' : ''}">${paid ? 'Liquidada' : 'Em aberto'}</span></td><td class="recent-value">${money.format(Number(account.valor) || 0)}</td></tr>`;
+          }).join('')
+        : '<tr><td colspan="4"><div class="dashboard-empty"><i class="fa-regular fa-folder-open"></i>Nenhuma conta cadastrada até o momento.</div></td></tr>';
+    }
+    function aplicarTela(screen) {
+      const selected = screen === 'contas' ? 'contas' : 'dashboard';
+      state.activeScreen = selected;
+      document.getElementById('view-dashboard').hidden = selected !== 'dashboard';
+      document.getElementById('view-contas').hidden = selected !== 'contas';
+      document.getElementById('nav-dashboard').classList.toggle('active', selected === 'dashboard');
+      document.getElementById('nav-contas').classList.toggle('active', selected === 'contas');
+      document.getElementById('nav-dashboard').setAttribute('aria-current', selected === 'dashboard' ? 'page' : 'false');
+      document.getElementById('nav-contas').setAttribute('aria-current', selected === 'contas' ? 'page' : 'false');
+      document.title = `${selected === 'dashboard' ? 'Dashboard' : 'Agenda de contas'} | Metalúrgica Usinagem EUROLATINA`;
+    }
+    function navegarPara(screen) {
+      aplicarTela(screen);
+      const hash = `#${state.activeScreen}`;
+      if (window.location.hash !== hash) window.history.pushState({ screen: state.activeScreen }, '', hash);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function abrirCadastroPelaDashboard() {
+      navegarPara('contas');
+      abrirModalNova();
+    }
+    function setText(id, value) { document.getElementById(id).textContent = value; }
+    function renderList(containerId, accounts, emptyMessage) {
+      const container = document.getElementById(containerId);
+      if (!accounts.length) {
+        container.innerHTML = `<div class="empty-state"><i class="fa-regular fa-circle-check"></i>${escapeHtml(emptyMessage)}</div>`;
+        return;
+      }
+      container.innerHTML = accounts.map(createCardHtml).join('');
+    }
+    function createCardHtml(account) {
+      const id = Number(account.id);
+      const paid = account.status === 'liquidada';
+      const today = localISODate();
+      const dueClass = account.data_vencimento < today ? 'overdue' : account.data_vencimento === today ? 'due-today' : 'upcoming';
+      const statusTag = paid
+        ? `<span class="tag paid-tag"><i class="fa-solid fa-check"></i> Liquidada${account.data_liquidacao ? ` · ${formatDate(account.data_liquidacao)}` : ''}</span>`
+        : account.data_vencimento < today
+          ? '<span class="tag overdue-tag">Em atraso</span>'
+          : account.data_vencimento === today
+            ? '<span class="tag today-tag">Vence hoje</span>'
+            : '<span class="tag">Pendente</span>';
+      const attachment = account.anexo_arquivo
+        ? `<a class="attachment-link" href="${API_URL}/${id}/anexo" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> ${escapeHtml(account.anexo_nome || 'Ver documento')}</a>`
+        : '<span class="attachment-link" style="color:#a0aaba"><i class="fa-regular fa-file"></i> Sem anexo</span>';
+      const paymentAction = paid
+        ? `<button class="icon-btn pay" type="button" title="Reabrir conta" aria-label="Reabrir conta" onclick="alterarStatus(${id}, 'pendente')"><i class="fa-solid fa-rotate-left"></i></button>`
+        : `<button class="icon-btn pay" type="button" title="Liquidar conta" aria-label="Liquidar conta" onclick="alterarStatus(${id}, 'liquidada')"><i class="fa-solid fa-check"></i></button>`;
+      return `
+        <article class="account-card ${dueClass} ${paid ? 'paid' : ''}">
+          <div class="card-top">
+            <div class="supplier-name">${escapeHtml(account.fornecedor)}</div>
+            <span class="due-date" title="Data de vencimento"><i class="fa-regular fa-calendar"></i> ${formatDate(account.data_vencimento)}</span>
+          </div>
+          <div class="card-meta">${statusTag}<span class="tag">${escapeHtml(account.categoria || 'Outros')}</span></div>
+          ${account.descricao ? `<p class="card-description">${escapeHtml(account.descricao)}</p>` : ''}
+          ${account.numero_documento ? `<div class="card-reference"><i class="fa-regular fa-file-lines"></i> Documento: ${escapeHtml(account.numero_documento)}</div>` : ''}
+          ${account.data_criacao ? `<div class="card-reference"><i class="fa-regular fa-clock"></i> Lançada em: ${formatDate(String(account.data_criacao).slice(0, 10))}</div>` : ''}
+          <div class="card-value">${money.format(Number(account.valor) || 0)}</div>
+          <div class="card-bottom">
+            ${attachment}
+            <div class="card-actions">
+              <button class="icon-btn" type="button" title="Anexar ou substituir documento" aria-label="Anexar documento" onclick="selecionarAnexo(${id})"><i class="fa-solid fa-paperclip"></i></button>
+              ${account.anexo_arquivo ? `<button class="icon-btn delete" type="button" title="Remover documento" aria-label="Remover documento" onclick="removerAnexo(${id})"><i class="fa-regular fa-circle-xmark"></i></button>` : ''}
+              ${paymentAction}
+              <button class="icon-btn edit" type="button" title="Editar conta" aria-label="Editar conta" onclick="editarConta(${id})"><i class="fa-solid fa-pen"></i></button>
+              <button class="icon-btn delete" type="button" title="Excluir conta" aria-label="Excluir conta" onclick="excluirConta(${id})"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+        </article>`;
+    }
+
+    function abrirModalNova() {
+      state.editingId = null;
+      document.getElementById('account-form').reset();
+      document.getElementById('account-modal-title').textContent = 'Cadastrar conta';
+      document.getElementById('save-account-btn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar conta';
+      document.getElementById('due-date').value = localISODate();
+      document.getElementById('account-modal').classList.add('open');
+      document.getElementById('supplier').focus();
+    }
+    function editarConta(id) {
+      const account = state.contas.find((item) => Number(item.id) === id);
+      if (!account) return showToast('Conta não encontrada na lista atual.', 'error');
+      state.editingId = id;
+      document.getElementById('account-form').reset();
+      document.getElementById('supplier').value = account.fornecedor || '';
+      document.getElementById('due-date').value = account.data_vencimento || '';
+      document.getElementById('amount').value = Number(account.valor || 0).toFixed(2);
+      document.getElementById('category').value = account.categoria || 'Outros';
+      document.getElementById('document-number').value = account.numero_documento || '';
+      document.getElementById('description').value = account.descricao || '';
+      document.getElementById('account-modal-title').textContent = 'Editar conta';
+      document.getElementById('save-account-btn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar alterações';
+      document.getElementById('account-modal').classList.add('open');
+      document.getElementById('supplier').focus();
+    }
+    function fecharModal() {
+      document.getElementById('account-modal').classList.remove('open');
+      state.editingId = null;
+    }
+    async function salvarConta(event) {
+      event.preventDefault();
+      const button = document.getElementById('save-account-btn');
+      const original = button.innerHTML;
+      const body = {
+        fornecedor: document.getElementById('supplier').value.trim(),
+        data_vencimento: document.getElementById('due-date').value,
+        valor: Number(document.getElementById('amount').value),
+        categoria: document.getElementById('category').value,
+        numero_documento: document.getElementById('document-number').value.trim(),
+        descricao: document.getElementById('description').value.trim()
+      };
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+      try {
+        if (state.editingId) {
+          await apiRequest(`${API_URL}/${state.editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+          showToast('Conta atualizada com sucesso.');
+        } else {
+          await apiRequest(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+          showToast('Conta cadastrada com sucesso.');
+        }
+        // Após salvar, posiciona a agenda no mês e no dia do vencimento da conta.
+        const [dueYear, dueMonth] = body.data_vencimento.split('-').map(Number);
+        state.calendarMonth = new Date(dueYear, dueMonth - 1, 1);
+        state.selectedDate = body.data_vencimento;
+        fecharModal();
+        await carregarContas();
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        button.disabled = false;
+        button.innerHTML = original;
+      }
+    }
+    async function alterarStatus(id, status) {
+      const account = state.contas.find((item) => Number(item.id) === id);
+      if (!account) return;
+      const liquidando = status === 'liquidada';
+      const message = liquidando
+        ? `Confirmar a liquidação da conta de ${account.fornecedor}, no valor de ${money.format(account.valor)}?`
+        : `Reabrir a conta de ${account.fornecedor}? Ela voltará a constar como pendente.`;
+      if (!window.confirm(message)) return;
+      try {
+        await apiRequest(`${API_URL}/${id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status })
+        });
+        showToast(liquidando ? 'Pagamento registrado com sucesso.' : 'Conta reaberta com sucesso.');
+        await carregarContas();
+      } catch (error) { showToast(error.message, 'error'); }
+    }
+    async function excluirConta(id) {
+      const account = state.contas.find((item) => Number(item.id) === id);
+      if (!account) return;
+      if (!window.confirm(`Excluir a conta de ${account.fornecedor}? Esta ação também removerá o documento anexado e não poderá ser desfeita.`)) return;
+      try {
+        await apiRequest(`${API_URL}/${id}`, { method: 'DELETE' });
+        showToast('Conta excluída com sucesso.');
+        await carregarContas();
+      } catch (error) { showToast(error.message, 'error'); }
+    }
+    function selecionarAnexo(id) {
+      state.attachmentAccountId = id;
+      const input = document.getElementById('attachment-input');
+      input.value = '';
+      input.click();
+    }
+    async function enviarAnexo(file) {
+      const id = state.attachmentAccountId;
+      state.attachmentAccountId = null;
+      if (!id || !file) return;
+      if (file.size > MAX_FILE_SIZE) return showToast('O arquivo deve ter no máximo 8 MB.', 'error');
+      const validTypes = [
+        'application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      ];
+      if (!validTypes.includes(file.type)) return showToast('Formato não permitido. Use PDF, JPG, PNG, WEBP, DOC, DOCX, XLS ou XLSX.', 'error');
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Não foi possível ler o arquivo selecionado.'));
+          reader.readAsDataURL(file);
+        });
+        showToast('Enviando documento...');
+        await apiRequest(`${API_URL}/${id}/anexo`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome: file.name, mime: file.type, dados: dataUrl })
+        });
+        showToast('Documento anexado com sucesso.');
+        await carregarContas();
+      } catch (error) { showToast(error.message, 'error'); }
+    }
+    async function removerAnexo(id) {
+      if (!window.confirm('Deseja remover o documento anexado a esta conta?')) return;
+      try {
+        await apiRequest(`${API_URL}/${id}/anexo`, { method: 'DELETE' });
+        showToast('Documento removido.');
+        await carregarContas();
+      } catch (error) { showToast(error.message, 'error'); }
+    }
+    function limparFiltros() {
+      document.getElementById('filter-search').value = '';
+      document.getElementById('filter-status').value = 'todos';
+      document.getElementById('filter-category').value = 'todas';
+      document.getElementById('filter-from').value = '';
+      document.getElementById('filter-to').value = '';
+      renderizar();
+    }
+    let searchTimer;
+    function configurarEventos() {
+      for (const id of ['filter-status', 'filter-category', 'filter-from', 'filter-to']) {
+        document.getElementById(id).addEventListener('change', renderizar);
+      }
+      document.getElementById('filter-search').addEventListener('input', () => {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(renderizar, 180);
+      });
+      document.getElementById('attachment-input').addEventListener('change', (event) => {
+        const file = event.target.files?.[0];
+        if (file) enviarAnexo(file);
+      });
+      document.getElementById('account-modal').addEventListener('click', (event) => {
+        if (event.target.id === 'account-modal') fecharModal();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') fecharModal();
+      });
+    }
+    function atualizarDataCabecalho() {
+      const now = new Date();
+      const formatted = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(now);
+      setText('header-date', dateFormatter.format(now));
+      setText('today-dashboard', formatted);
+      setText('today-contas', formatted);
+    }
+    window.addEventListener('popstate', () => aplicarTela(window.location.hash.replace('#', '') || 'dashboard'));
+    configurarEventos();
+    atualizarDataCabecalho();
+    aplicarTela(window.location.hash.replace('#', '') || 'dashboard');
+    if (!window.location.hash) window.history.replaceState({ screen: 'dashboard' }, '', '#dashboard');
+    carregarContas();
+  </script>
+</body>
+</html>
