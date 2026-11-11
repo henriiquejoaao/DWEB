@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pesquisa de Cinema - Atividade 8</title>
+  <link rel="stylesheet" href="styles/style.css">
+  <script src="scripts/script.js" defer></script>
+</head>
+<body>
+
+  <div class="container">
+    <div class="card form-card">
+      <h2>Nova Pesquisa</h2>
+      
+      <div class="form-group">
+        <label for="idade">Idade:</label>
+        <input type="number" id="idade" min="1" required>
+      </div>
+
+      <div class="form-group">
+        <label for="sexo">Sexo:</label>
+        <select id="sexo">
+          <option value="Feminino">Feminino</option>
+          <option value="Masculino">Masculino</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="opiniao">Opinião:</label>
+        <select id="opiniao">
+          <option value="4">Ótimo (4)</option>
+          <option value="3">Bom (3)</option>
+          <option value="2">Regular (2)</option>
+          <option value="1">Péssimo (1)</option>
+        </select>
+      </div>
+
+      <button type="button" onclick="adicionarResposta()">Registrar Resposta</button>
+      
+      <div id="contador">Total de respostas: 0 / 45</div>
+    </div>
+
+    <div class="card result-card">
+      <h2>Resultados Consolidados</h2>
+      <p>Média de idade: <span id="mediaIdade">0</span></p>
+      <p>Idade da pessoa mais velha: <span id="maisVelha">0</span></p>
+      <p>Idade da pessoa mais nova: <span id="maisNova">0</span></p>
+      <p>Respostas "Péssimo": <span id="qtdPessimo">0</span></p>
+      <p>Porcentagem "Ótimo/Bom": <span id="pctOtimoBom">0</span>%</p>
+      <p>Mulheres: <span id="qtdMulheres">0</span></p>
+      <p>Homens: <span id="qtdHomens">0</span></p>
+      <p>Outros: <span id="qtdOutros">0</span></p>
+    </div>
+  </div>
+
+</body>
+</html>
