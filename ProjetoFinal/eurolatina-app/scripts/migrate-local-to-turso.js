@@ -5,6 +5,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env.local') });
 const sqlite3 = require('sqlite3').verbose();
 const { createClient } = require('@libsql/client');
 

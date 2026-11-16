@@ -1,174 +1,158 @@
-# EUROLATINA — Sistema de Contas a Pagar
+# EUROLATINA — Contas a Pagar (cloud-only)
 
-Aplicação web local para controle das contas a pagar da **Metalúrgica Usinagem EUROLATINA**. O painel organiza as obrigações por vencimento e mantém os dados em SQLite.
+Sistema web de Contas a Pagar da **Metalúrgica Usinagem EUROLATINA**, com duas telas: Dashboard financeiro e Agenda mensal.
 
-## Organização das telas
+## Arquitetura de produção
 
-A aplicação possui duas telas acessadas pela navegação no cabeçalho:
+A aplicação foi configurada para usar **exclusivamente o Turso Cloud (libSQL remoto)** como banco de dados, tanto quando publicada no Vercel quanto quando executada localmente para desenvolvimento.
 
-- **Dashboard:** visão consolidada com indicadores financeiros, agenda de vencimentos, despesas por categoria e últimos lançamentos. Os indicadores consideram todas as contas cadastradas.
-- **Agenda:** calendário mensal com navegação entre meses, identificação visual de contas vencidas, a vencer e liquidadas, resumo dos valores do mês e painel de detalhes do dia selecionado. A partir dos cards do dia é possível cadastrar, editar, liquidar/reabrir, excluir e anexar documentos.
+- **Frontend:** HTML5, CSS3 e JavaScript, servido pelo Express.
+- **Backend:** Node.js + Express, implantado como Vercel Function.
+- **Banco de dados:** Turso Cloud.
+- **Documentos anexados:** conteúdo binário armazenado no próprio banco Turso.
+- **Hospedagem:** Vercel.
 
-Os filtros da tela **Agenda** não alteram os totais consolidados exibidos no **Dashboard**. A agenda mostra os vencimentos do mês selecionado e permite consultar o detalhe de cada dia.
+Não existe fallback para `database.sqlite`, nem gravação de anexos em `uploads/`. O computador do usuário não precisa ficar ligado para que o sistema publicado funcione. O pacote não contém credenciais nem cria automaticamente uma conta/banco na sua organização Turso: é necessário conectar um recurso Turso ao projeto Vercel uma única vez.
 
-## Funcionalidades
+## Importante: corrigir a mensagem de configuração
 
-- Cadastro de contas com fornecedor, vencimento, valor, categoria, número de documento e observações.
-- Edição dos dados de uma conta.
-- Liquidação de pagamento, com registro automático da data de liquidação.
-- Reabertura de uma conta liquidada, voltando o status para pendente.
-- Exclusão da conta e do documento relacionado.
-- Anexar, visualizar/baixar, substituir e remover documentos.
-- Agenda mensal com navegação mês a mês, seleção de dias e resumo de contas pendentes/liquidadas.
-- Totais em reais, indicadores financeiros, pesquisa e filtros por status, categoria e período.
-- Migração automática da tabela antiga `contas`, sem apagar os registros que já existirem.
+A mensagem `Configure TURSO_DATABASE_URL e TURSO_AUTH_TOKEN...` indica que o projeto Vercel ainda não está recebendo as credenciais do banco remoto. O código não pode gerar essas credenciais por conta própria.
 
-## Tecnologias
+### 1. Criar e conectar o banco Turso ao Vercel
 
-- Node.js
-- Express
-- SQLite local (`sqlite3`)
-- Turso / libSQL (`@libsql/client`) para persistência em hospedagem serverless
-- HTML5, CSS3 e JavaScript puro (`fetch`)
+1. Entre no [Vercel](https://vercel.com/) e abra o projeto da EUROLATINA.
+2. Abra a área **Storage** ou **Marketplace / Integrations** do projeto.
+3. Escolha **Turso** / **Turso Cloud** e crie ou conecte um banco de dados.
+4. Durante a conexão, mantenha os nomes padrão das variáveis, sem prefixo personalizado. A integração deve disponibilizar exatamente:
+   - `TURSO_DATABASE_URL`
+   - `TURSO_AUTH_TOKEN`
+5. Abra **Settings → Environment Variables** e confira se as duas variáveis estão disponíveis para **Production**. Marque Preview e Development também se pretende usar esses ambientes.
+6. Não cole o token no código, no GitHub, em mensagens ou no arquivo `.env.example`.
 
-## Requisitos
+Atalho oficial: [Turso Cloud no Vercel Marketplace](https://vercel.com/marketplace/tursocloud/database).
 
-- Node.js 20 ou superior.
-- npm.
+> Se você já adicionou manualmente as variáveis, confira se os nomes estão escritos exatamente como acima e se os valores são do mesmo banco Turso. Não use valores de exemplo.
 
-## Como executar no Linux / Pop!_OS
+### 2. Fazer um novo deploy
 
-1. Extraia o arquivo ZIP.
-2. Entre na pasta do projeto:
+Depois de conectar o Turso ou alterar as variáveis:
 
-   ```bash
-   cd eurolatina-app
-   ```
+1. Abra **Deployments** no Vercel.
+2. Faça **Redeploy** da versão mais recente, ou envie um novo commit pelo GitHub.
+3. Aguarde o deploy terminar e abra o domínio de produção.
 
-3. Instale as dependências:
+Alterações nas variáveis de ambiente só entram em vigor em novos deploys; um deploy antigo não passa a usar as novas variáveis automaticamente.
+
+### 3. Confirmar a conexão
+
+Abra no navegador:
+
+```text
+https://SEU-DOMINIO.vercel.app/api/health
+```
+
+Quando estiver conectado, a resposta deve conter:
+
+```json
+{
+  "status": "ok",
+  "aplicacao": "EUROLATINA - Contas a Pagar",
+  "banco": "Turso Cloud",
+  "persistencia": "remota"
+}
+```
+
+Se retornar HTTP 503, o JSON informa se as variáveis estão ausentes ou se houve falha de conexão/autenticação. Consulte também **Deployments → Runtime Logs** no Vercel.
+
+## Publicação no Vercel
+
+1. Extraia o ZIP e envie o conteúdo da pasta `eurolatina-app` para a raiz do repositório GitHub. O arquivo `package.json` e `server.js` devem ficar na raiz do repositório.
+2. Se preferir manter a pasta `eurolatina-app` dentro do repositório, configure-a como **Root Directory** nas configurações do projeto Vercel.
+3. Importe/conecte o repositório no Vercel. A plataforma detecta a aplicação Express pelo `server.js` exportado; não é necessário definir uma pasta de saída estática.
+4. Conecte o Turso conforme a seção anterior e faça o deploy.
+
+## Desenvolvimento local usando o mesmo banco remoto
+
+O modo local também utiliza Turso. Assim, os dados visualizados no computador e no site publicado são os mesmos, desde que apontem para a mesma base remota.
+
+1. Instale Node.js 20 ou superior.
+2. Instale as dependências:
 
    ```bash
    npm install
    ```
 
-4. Execute os testes automatizados (opcional):
+3. Copie `.env.example` para `.env.local` e preencha com as credenciais do Turso obtidas no painel/integração:
 
    ```bash
-   npm test
+   cp .env.example .env.local
    ```
 
-5. Inicie o servidor:
+4. Verifique a conexão sem revelar o token:
+
+   ```bash
+   npm run check:cloud
+   ```
+
+5. Inicie a aplicação:
 
    ```bash
    npm start
    ```
 
-6. Abra no navegador:
+6. Acesse `http://localhost:3000`.
 
-   ```text
-   http://localhost:3000
-   ```
+O arquivo `.env.local` é ignorado pelo Git. Nunca compartilhe esse arquivo. Para puxar as variáveis do projeto Vercel para o computador, também é possível usar o Vercel CLI após vincular o diretório ao projeto: `vercel link` e `vercel env pull .env.local`.
 
-O banco `database.sqlite` e a pasta `uploads/` são criados automaticamente na primeira execução. Nesta versão, os novos anexos são guardados como BLOB dentro do SQLite. O servidor ainda consegue ler anexos antigos que estejam em `uploads/`. Para encerrar o servidor, use `Ctrl+C` no terminal.
+## Migração de dados antigos (opcional)
 
+A aplicação em execução não lê SQLite local. Se você possui um `database.sqlite` de uma versão antiga e deseja preservar suas contas, use o script de migração uma única vez:
 
-## Publicar no Vercel (com banco persistente)
-
-O projeto está preparado para ser publicado no Vercel usando **Turso (SQLite hospedado)**. No ambiente Vercel, o backend exporta a aplicação Express como Function, os arquivos estáticos ficam em `public/` e o banco não é criado no disco temporário da Function.
-
-> **Importante:** não publique usando apenas `database.sqlite` local. O sistema de arquivos das Functions não é um banco persistente. O Vercel precisa das duas variáveis abaixo para conectar ao Turso.
-
-### 1. Criar e conectar o banco Turso
-
-1. Crie uma conta em [Turso](https://turso.tech/) e crie um banco de dados SQLite.
-2. Copie a URL do banco (formato `libsql://...`) e gere um token de autenticação.
-3. No Vercel, abra o projeto e conecte a integração **Turso Cloud** pela Marketplace/Storage, ou cadastre manualmente as variáveis em **Settings → Environment Variables**.
-4. Cadastre estas variáveis para os ambientes em que fará deploy (Production e Preview; Development se desejar):
-
-   ```env
-   TURSO_DATABASE_URL=libsql://seu-banco-sua-organizacao.turso.io
-   TURSO_AUTH_TOKEN=seu-token-secreto
-   ```
-
-   Não coloque o token no código, no GitHub ou em arquivos públicos. O arquivo `.env.example` é apenas um modelo, sem credenciais reais.
-
-### 2. Publicar o projeto
-
-1. Envie para o GitHub o conteúdo da pasta `eurolatina-app` (o `package.json` precisa ficar na raiz do repositório) ou configure essa pasta como **Root Directory** no Vercel.
-2. No Vercel, importe o repositório. O projeto usa Node.js 20 ou superior e Express; não precisa de comando de build nem de diretório de saída personalizado.
-3. Confirme que `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN` estão disponíveis para o ambiente do deploy.
-4. Clique em **Deploy** ou faça um novo **Redeploy** depois de adicionar as variáveis.
-5. Ao abrir o domínio, teste `https://seu-dominio.vercel.app/api/health`. A resposta esperada é um JSON com `"status":"ok"`.
-
-A tabela `contas` e os índices são criados automaticamente no Turso na primeira inicialização. Novas contas e novos anexos ficam persistidos nesse banco remoto. O SQLite local continua sendo usado quando o projeto é iniciado com `npm start` sem as variáveis Turso.
-
-### 2.1. Levar os dados do SQLite local para o Turso (opcional)
-
-Se você já cadastrou contas no computador e quer levá-las para o banco remoto, antes do deploy:
-
-1. Coloque o `database.sqlite` atual e a pasta `uploads/` na raiz do projeto.
-2. Configure as variáveis no terminal, usando os valores do seu banco:
+1. Faça uma cópia de segurança do banco SQLite e da pasta `uploads/` antigos.
+2. Coloque `database.sqlite` e a pasta `uploads/` antiga na raiz desta pasta do projeto.
+3. Preencha `.env.local` com as credenciais do banco Turso de destino.
+4. Execute:
 
    ```bash
-   export TURSO_DATABASE_URL="libsql://seu-banco-sua-organizacao.turso.io"
-   export TURSO_AUTH_TOKEN="seu-token-secreto"
+   npm install
+   npm run migrate:turso
    ```
 
-3. Execute `npm run migrate:turso`.
+5. Confira os registros no Turso e no site publicado antes de remover os arquivos legados.
 
-O script copia as contas e tenta migrar também os anexos antigos da pasta `uploads/`. Faça backup do banco remoto antes de repetir a operação: os registros com o mesmo ID no destino serão substituídos. O ZIP não contém seu banco local, então essa etapa só é necessária quando você já possui dados que deseja preservar.
+O SQLite e a dependência `sqlite3` são usados **somente pelo utilitário de migração**. O servidor `server.js` não importa `sqlite3`, não cria banco local e não usa arquivos locais para armazenar dados.
 
-### 3. Limite de anexos no Vercel
-
-Os anexos têm limite de **3 MB** porque as Vercel Functions aceitam payloads de até 4,5 MB e o sistema envia os documentos codificados em base64. Para anexos maiores, seria necessário implementar upload direto para um serviço de armazenamento de objetos, como Vercel Blob.
-
-### 4. Erros comuns
-
-- **A página informa que uma Function falhou:** abra **Deployments → último deploy → Functions/Runtime Logs** e confira o erro registrado.
-- **A API retorna 503 informando variáveis Turso:** cadastre `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN` no ambiente correto e faça Redeploy.
-- **A API retorna erro de autenticação ou conexão:** confira se a URL e o token pertencem ao mesmo banco Turso e se não há espaços extras.
-- **A URL principal não mostra a interface:** confirme que `public/index.html` está no projeto e que `eurolatina-app` (ou a pasta que contém `package.json`) está configurada como Root Directory.
-
-## Configurações opcionais
-
-É possível alterar a porta e o local do banco por variáveis de ambiente:
+## Testes
 
 ```bash
-PORT=3333 DB_FILE=/caminho/para/eurolatina.sqlite npm start
+npm test
 ```
 
-## API REST
+Os testes de interface e de configuração cloud-only rodam sem credenciais remotas. O teste de integração CRUD pode ser habilitado com uma base Turso exclusiva para testes, definindo `TURSO_TEST_DATABASE_URL` e `TURSO_TEST_AUTH_TOKEN` no ambiente. Não use o banco de produção para testes automatizados.
+
+## Funcionalidades
+
+- Dashboard consolidado com indicadores de contas a pagar.
+- Agenda financeira mensal com navegação entre meses e seleção de dias.
+- Cadastro, edição, exclusão e liquidação/reabertura de contas.
+- Registro da data de criação e liquidação.
+- Filtros e pesquisa por fornecedor, status, categoria e período.
+- Anexos PDF, JPG, PNG, WEBP, DOC, DOCX, XLS e XLSX, até 3 MB.
+- Migração automática de campos antigos na tabela remota `contas`.
+
+## Rotas da API
 
 | Método | Rota | Finalidade |
 |---|---|---|
-| GET | `/api/health` | Verificar se a API está ativa |
-| GET | `/api/contas` | Listar contas; aceita filtros `busca`, `status`, `categoria`, `de` e `ate` |
+| GET | `/api/health` | Estado da conexão com o Turso Cloud |
+| GET | `/api/contas` | Listar contas; aceita `busca`, `status`, `categoria`, `de` e `ate` |
 | POST | `/api/contas` | Cadastrar conta |
 | PUT | `/api/contas/:id` | Editar conta e/ou alterar status |
-| DELETE | `/api/contas/:id` | Excluir conta e arquivo vinculado |
-| POST | `/api/contas/:id/anexo` | Anexar ou substituir documento |
-| GET | `/api/contas/:id/anexo` | Visualizar/baixar documento |
-| DELETE | `/api/contas/:id/anexo` | Remover documento |
+| DELETE | `/api/contas/:id` | Excluir conta e seu anexo |
+| POST | `/api/contas/:id/anexo` | Anexar ou substituir documento no Turso |
+| GET | `/api/contas/:id/anexo` | Visualizar/baixar documento do Turso |
+| DELETE | `/api/contas/:id/anexo` | Remover documento do Turso |
 
-### Exemplo de cadastro
+## Observações de segurança
 
-```json
-{
-  "fornecedor": "Aços e Metais Sorocaba Ltda.",
-  "data_vencimento": "2026-12-10",
-  "valor": 1850.5,
-  "categoria": "Matéria-prima",
-  "numero_documento": "NF 000123",
-  "descricao": "Compra de barras de aço para produção."
-}
-```
-
-### Anexos
-
-São aceitos PDF, JPG, PNG, WEBP, DOC, DOCX, XLS e XLSX, com tamanho máximo de 3 MB por arquivo. Esse limite mantém os uploads compatíveis com o limite de payload das Vercel Functions.
-
-## Observações acadêmicas e de implantação
-
-Este pacote é uma aplicação acadêmica/local, sem autenticação, perfis de acesso, trilha de auditoria ou integração bancária/fiscal. Antes de utilizar com dados financeiros reais em ambiente de produção, implemente autenticação e autorização, backups, HTTPS, política de retenção de documentos e auditoria das alterações.
-
-O banco SQLite usado durante o desenvolvimento não é incluído no ZIP para evitar levar registros de teste. Ele será criado automaticamente ao iniciar o sistema. Caso você já tenha um `database.sqlite` com contas válidas, mantenha-o na raiz do projeto: o servidor adiciona os novos campos sem apagar os dados existentes.
+Este pacote acadêmico ainda não implementa autenticação, perfis/permissões, trilha de auditoria ou integração bancária/fiscal. Antes de armazenar dados financeiros reais em produção, adicione login e autorização, política de backup/recuperação, auditoria e controles de acesso aos documentos.

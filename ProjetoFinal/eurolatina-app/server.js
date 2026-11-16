@@ -1,35 +1,41 @@
 'use strict';
 
-const express = require('express');
-const useTurso = Boolean(process.env.TURSO_DATABASE_URL);
-const runningOnVercel = Boolean(process.env.VERCEL);
-const sqlite3 = (!useTurso && !runningOnVercel) ? require('sqlite3').verbose() : null;
 const path = require('path');
-const fs = require('fs');
+require('dotenv').config({ path: path.join(__dirname, '.env.local') });
+
+const express = require('express');
 const crypto = require('crypto');
+const { createClient } = require('@libsql/client');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
-const DB_FILE = process.env.DB_FILE ? path.resolve(process.env.DB_FILE) : path.join(__dirname, 'database.sqlite');
-const UPLOAD_DIR = process.env.UPLOAD_DIR ? path.resolve(process.env.UPLOAD_DIR) : path.join(__dirname, 'uploads');
 const PUBLIC_DIR = path.join(__dirname, 'public');
-// Vercel Functions limitam o corpo da requisição a 4,5 MB; como o upload usa base64,
-// limitamos o arquivo a 3 MB para manter o payload abaixo do limite da plataforma.
+// O navegador envia o arquivo em base64; 3 MB mantém a requisição abaixo do limite
+// de payload atualmente aplicado às Vercel Functions.
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
 const STATUSES = new Set(['pendente', 'liquidada']);
 
-let db = null;
+const missingDatabaseVariables = ['TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN']
+  .filter((name) => !String(process.env[name] || '').trim());
+
 let turso = null;
-if (useTurso) {
-  const { createClient } = require('@libsql/client');
-  turso = createClient({
-    url: process.env.TURSO_DATABASE_URL,
-    authToken: process.env.TURSO_AUTH_TOKEN
-  });
-} else if (!runningOnVercel) {
-  fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  db = new sqlite3.Database(DB_FILE);
+let databaseInitError = null;
+
+if (missingDatabaseVariables.length === 0) {
+  try {
+    turso = createClient({
+      url: process.env.TURSO_DATABASE_URL.trim(),
+      authToken: process.env.TURSO_AUTH_TOKEN.trim()
+    });
+  } catch (error) {
+    databaseInitError = new Error(`Não foi possível inicializar o cliente Turso: ${error.message}`);
+  }
+} else {
+  databaseInitError = new Error(
+    `Banco de dados em nuvem não configurado. Faltam: ${missingDatabaseVariables.join(' e ')}. ` +
+    'Conecte um banco Turso ao projeto Vercel (Storage/Marketplace), confira as variáveis no ambiente Production e faça um novo deploy. ' +
+    'Esta versão não usa SQLite local nem armazenamento temporário.'
+  );
 }
 
 app.disable('x-powered-by');
@@ -43,43 +49,25 @@ function normalizeTursoRow(row, columns) {
 }
 
 function run(sql, params = []) {
-  if (turso) {
-    return turso.execute({ sql, args: params }).then((result) => ({
-      lastID: Number(result.lastInsertRowid || 0),
-      changes: Number(result.rowsAffected || 0)
-    }));
-  }
-  if (!db) return Promise.reject(new Error('Banco de dados não configurado. Defina TURSO_DATABASE_URL e TURSO_AUTH_TOKEN no Vercel.'));
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function onRun(error) {
-      if (error) return reject(error);
-      resolve({ lastID: this.lastID, changes: this.changes });
-    });
-  });
+  if (!turso) return Promise.reject(databaseInitError || new Error('Cliente Turso indisponível.'));
+  return turso.execute({ sql, args: params }).then((result) => ({
+    lastID: Number(result.lastInsertRowid || 0),
+    changes: Number(result.rowsAffected || 0)
+  }));
 }
 
 function get(sql, params = []) {
-  if (turso) {
-    return turso.execute({ sql, args: params }).then((result) =>
-      result.rows.length ? normalizeTursoRow(result.rows[0], result.columns) : undefined
-    );
-  }
-  if (!db) return Promise.reject(new Error('Banco de dados não configurado. Defina TURSO_DATABASE_URL e TURSO_AUTH_TOKEN no Vercel.'));
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (error, row) => error ? reject(error) : resolve(row));
-  });
+  if (!turso) return Promise.reject(databaseInitError || new Error('Cliente Turso indisponível.'));
+  return turso.execute({ sql, args: params }).then((result) =>
+    result.rows.length ? normalizeTursoRow(result.rows[0], result.columns) : undefined
+  );
 }
 
 function all(sql, params = []) {
-  if (turso) {
-    return turso.execute({ sql, args: params }).then((result) =>
-      result.rows.map((row) => normalizeTursoRow(row, result.columns))
-    );
-  }
-  if (!db) return Promise.reject(new Error('Banco de dados não configurado. Defina TURSO_DATABASE_URL e TURSO_AUTH_TOKEN no Vercel.'));
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (error, rows) => error ? reject(error) : resolve(rows));
-  });
+  if (!turso) return Promise.reject(databaseInitError || new Error('Cliente Turso indisponível.'));
+  return turso.execute({ sql, args: params }).then((result) =>
+    result.rows.map((row) => normalizeTursoRow(row, result.columns))
+  );
 }
 
 function todayISO() {
@@ -146,17 +134,6 @@ function accountById(id) {
   return get(`SELECT ${ACCOUNT_COLUMNS} FROM contas WHERE id = ?`, [id]);
 }
 
-async function deleteStoredAttachment(filename) {
-  // No Turso o documento está salvo como BLOB no banco, não no filesystem.
-  if (useTurso || !filename) return;
-  const safeName = path.basename(filename);
-  try {
-    await fs.promises.unlink(path.join(UPLOAD_DIR, safeName));
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-  }
-}
-
 async function initializeDatabase() {
   await run(`CREATE TABLE IF NOT EXISTS contas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -176,7 +153,7 @@ async function initializeDatabase() {
     anexo_conteudo BLOB
   )`);
 
-  // Migração incremental: mantém os registros da versão anterior do projeto.
+  // Migração incremental para manter a estrutura de versões anteriores no banco remoto.
   const columns = await all('PRAGMA table_info(contas)');
   const existing = new Set(columns.map((column) => column.name));
   const additions = [
@@ -202,36 +179,44 @@ async function initializeDatabase() {
   await run('CREATE INDEX IF NOT EXISTS idx_contas_status ON contas(status)');
 }
 
-let databaseInitError = null;
 const databaseReady = (async () => {
-  if (runningOnVercel && !useTurso) {
-    throw new Error('Configure TURSO_DATABASE_URL e TURSO_AUTH_TOKEN nas variáveis de ambiente do Vercel. O SQLite em arquivo local não é persistente no ambiente serverless.');
-  }
-  if (useTurso && !process.env.TURSO_AUTH_TOKEN) {
-    throw new Error('A variável TURSO_AUTH_TOKEN não foi configurada.');
-  }
+  if (databaseInitError) throw databaseInitError;
   await initializeDatabase();
 })().catch((error) => {
   databaseInitError = error;
-  console.error('Falha na inicialização do banco de dados:', error);
+  console.error('Falha na inicialização/conexão com o Turso Cloud:', error);
 });
 
-// Aguarda a conexão/migração antes de processar rotas de API.
+// Diagnóstico explícito: não depende da inicialização do banco para explicar a configuração ausente.
+app.get('/api/health', async (req, res) => {
+  await databaseReady;
+  if (databaseInitError) {
+    return res.status(503).json({
+      status: 'error',
+      banco: 'Turso Cloud',
+      configurado: false,
+      erro: databaseInitError.message
+    });
+  }
+  return res.json({
+    status: 'ok',
+    aplicacao: 'EUROLATINA - Contas a Pagar',
+    banco: 'Turso Cloud',
+    persistencia: 'remota'
+  });
+});
+
+// Todas as rotas de dados só são liberadas depois de conectar e preparar o banco remoto.
 app.use(async (req, res, next) => {
   try {
     await databaseReady;
     if (databaseInitError) {
-      return res.status(503).json({ error: databaseInitError.message });
+      return res.status(503).json({ error: databaseInitError.message, banco: 'Turso Cloud' });
     }
-    next();
+    return next();
   } catch (error) {
-    next(error);
+    return next(error);
   }
-});
-
-// Health check para facilitar testes e diagnóstico local.
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', aplicacao: 'EUROLATINA - Contas a Pagar' });
 });
 
 // Lista as contas e aceita filtros opcionais.
@@ -320,7 +305,7 @@ app.put('/api/contas/:id', async (req, res, next) => {
   }
 });
 
-// Remove a conta e o arquivo vinculado, se houver.
+// Remove a conta e seu documento (ambos persistidos no banco remoto).
 app.delete('/api/contas/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
@@ -328,9 +313,6 @@ app.delete('/api/contas/:id', async (req, res, next) => {
     const current = await accountById(id);
     if (!current) return res.status(404).json({ error: 'Conta não encontrada.' });
     await run('DELETE FROM contas WHERE id = ?', [id]);
-    await deleteStoredAttachment(current.anexo_arquivo).catch((cleanupError) => {
-      console.warn('Não foi possível remover o arquivo da conta excluída:', cleanupError.message);
-    });
     res.json({ deleted: true, id });
   } catch (error) {
     next(error);
@@ -348,9 +330,8 @@ const allowedMimeTypes = new Map([
   ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx']
 ]);
 
-// Recebe um documento em base64. O nome físico é gerado pelo servidor.
+// Recebe o documento e salva o conteúdo binário diretamente no Turso Cloud.
 app.post('/api/contas/:id/anexo', async (req, res, next) => {
-  let newFilename;
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Identificador inválido.' });
@@ -372,25 +353,20 @@ app.post('/api/contas/:id/anexo', async (req, res, next) => {
     if (!buffer.length) return res.status(400).json({ error: 'O arquivo está vazio.' });
     if (buffer.length > MAX_ATTACHMENT_BYTES) return res.status(413).json({ error: 'O arquivo ultrapassa o limite de 3 MB.' });
 
-    newFilename = `${crypto.randomUUID()}.${extension}`;
+    const remoteFileId = `${crypto.randomUUID()}.${extension}`;
     const safeOriginalName = String(nome || `documento.${extension}`).replace(/\\/g, '/').split('/').pop().slice(0, 180);
 
-    // O conteúdo fica no próprio banco para funcionar também em hospedagem serverless.
     await run(
       'UPDATE contas SET anexo_nome = ?, anexo_arquivo = ?, anexo_mime = ?, anexo_tamanho = ?, anexo_conteudo = ? WHERE id = ?',
-      [safeOriginalName, newFilename, normalizedMime, buffer.length, buffer, id]
+      [safeOriginalName, remoteFileId, normalizedMime, buffer.length, buffer, id]
     );
-    await deleteStoredAttachment(current.anexo_arquivo).catch((cleanupError) => {
-      console.warn('Não foi possível remover o anexo substituído:', cleanupError.message);
-    });
     res.json(await accountById(id));
   } catch (error) {
-    if (newFilename) await deleteStoredAttachment(newFilename).catch(() => {});
     next(error);
   }
 });
 
-// Faz download/visualização do documento associado à conta.
+// Faz download/visualização do documento diretamente do BLOB no Turso Cloud.
 app.get('/api/contas/:id/anexo', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
@@ -399,23 +375,19 @@ app.get('/api/contas/:id/anexo', async (req, res, next) => {
       'SELECT anexo_nome, anexo_arquivo, anexo_mime, anexo_conteudo FROM contas WHERE id = ?', [id]
     );
     if (!account) return res.status(404).json({ error: 'Conta não encontrada.' });
-    if (!account.anexo_arquivo) return res.status(404).json({ error: 'Esta conta não possui documento anexado.' });
+    if (!account.anexo_arquivo || !account.anexo_conteudo) {
+      return res.status(404).json({ error: 'Esta conta não possui documento armazenado no Turso Cloud.' });
+    }
     res.setHeader('Content-Type', account.anexo_mime || 'application/octet-stream');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    if (account.anexo_conteudo) {
-      res.attachment(account.anexo_nome || 'documento');
-      return res.send(Buffer.from(account.anexo_conteudo));
-    }
-    // Compatibilidade com anexos antigos salvos em disco na versão local anterior.
-    const filePath = path.join(UPLOAD_DIR, path.basename(account.anexo_arquivo));
-    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'O arquivo anexado não foi encontrado no servidor.' });
-    return res.download(filePath, account.anexo_nome || 'documento');
+    res.attachment(account.anexo_nome || 'documento');
+    return res.send(Buffer.from(account.anexo_conteudo));
   } catch (error) {
     next(error);
   }
 });
 
-// Desvincula e apaga somente o documento, mantendo a conta.
+// Desvincula e apaga o documento no mesmo banco remoto.
 app.delete('/api/contas/:id/anexo', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
@@ -424,9 +396,6 @@ app.delete('/api/contas/:id/anexo', async (req, res, next) => {
     if (!account) return res.status(404).json({ error: 'Conta não encontrada.' });
     if (!account.anexo_arquivo) return res.status(404).json({ error: 'Esta conta não possui documento anexado.' });
     await run('UPDATE contas SET anexo_nome = NULL, anexo_arquivo = NULL, anexo_mime = NULL, anexo_tamanho = NULL, anexo_conteudo = NULL WHERE id = ?', [id]);
-    await deleteStoredAttachment(account.anexo_arquivo).catch((cleanupError) => {
-      console.warn('Não foi possível remover o documento desvinculado:', cleanupError.message);
-    });
     res.json(await accountById(id));
   } catch (error) {
     next(error);
@@ -444,15 +413,15 @@ app.use((error, req, res, next) => {
   if (error.type === 'entity.too.large') {
     return res.status(413).json({ error: 'A requisição excede o limite permitido.' });
   }
-  res.status(500).json({ error: 'Erro interno do servidor. Consulte o terminal para mais detalhes.' });
+  res.status(500).json({ error: 'Erro interno do servidor. Consulte os Runtime Logs do Vercel para detalhes.' });
 });
 
-// O Vercel importa e executa a aplicação Express como uma Function.
-// O listen() fica reservado para execução local no Pop!_OS.
+// A aplicação Express é exportada para o Vercel. O listen() é usado apenas no modo local,
+// mas também exige as credenciais do mesmo banco Turso: não existe fallback para SQLite.
 if (require.main === module) {
   databaseReady.then(() => {
     if (databaseInitError) {
-      console.error('Não foi possível inicializar o banco de dados:', databaseInitError);
+      console.error('Não foi possível conectar ao banco obrigatório Turso Cloud:', databaseInitError.message);
       process.exitCode = 1;
       return;
     }
@@ -460,18 +429,13 @@ if (require.main === module) {
       console.log('================================================');
       console.log('  METALÚRGICA USINAGEM EUROLATINA');
       console.log(`  Sistema disponível em http://localhost:${PORT}`);
-      console.log(`  Banco de dados: ${useTurso ? 'Turso (remoto)' : DB_FILE}`);
+      console.log('  Banco de dados: Turso Cloud (remoto)');
       console.log('================================================');
     });
   });
 
-  const closeSqlite = () => {
-    if (db) return db.close(() => process.exit(0));
-    if (turso) return turso.close().finally(() => process.exit(0));
-    process.exit(0);
-  };
-  process.on('SIGINT', closeSqlite);
-  process.on('SIGTERM', closeSqlite);
+  process.on('SIGINT', () => turso?.close().finally(() => process.exit(0)));
+  process.on('SIGTERM', () => turso?.close().finally(() => process.exit(0)));
 }
 
 module.exports = app;
