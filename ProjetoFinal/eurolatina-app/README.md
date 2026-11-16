@@ -1,126 +1,110 @@
-# EUROLATINA — Contas a Pagar (cloud-only)
+# EUROLATINA — Gestão Financeira (cloud-only)
 
-Sistema web de Contas a Pagar da **Metalúrgica Usinagem EUROLATINA**, com duas telas: Dashboard financeiro e Agenda mensal.
+Sistema web da **Metalúrgica Usinagem EUROLATINA**, com Dashboard, Agenda mensal, contas a pagar e a receber, autenticação, controle de acesso por perfil e trilha de auditoria.
 
-## Arquitetura de produção
-
-A aplicação foi configurada para usar **exclusivamente o Turso Cloud (libSQL remoto)** como banco de dados, tanto quando publicada no Vercel quanto quando executada localmente para desenvolvimento.
+## Arquitetura
 
 - **Frontend:** HTML5, CSS3 e JavaScript, servido pelo Express.
-- **Backend:** Node.js + Express, implantado como Vercel Function.
-- **Banco de dados:** Turso Cloud.
-- **Documentos anexados:** conteúdo binário armazenado no próprio banco Turso.
+- **Backend:** Node.js 20+ e Express, publicado como Vercel Function.
+- **Banco de dados:** Turso Cloud (libSQL remoto), obrigatório em produção e desenvolvimento.
+- **Documentos:** conteúdo armazenado como BLOB no Turso; não são gravados em diretórios locais.
 - **Hospedagem:** Vercel.
 
-Não existe fallback para `database.sqlite`, nem gravação de anexos em `uploads/`. O computador do usuário não precisa ficar ligado para que o sistema publicado funcione. O pacote não contém credenciais nem cria automaticamente uma conta/banco na sua organização Turso: é necessário conectar um recurso Turso ao projeto Vercel uma única vez.
+O servidor não usa SQLite local como base operacional e não possui fallback para disco temporário. O utilitário opcional `migrate:turso` usa SQLite somente para importar lançamentos de versões antigas.
 
-## Importante: corrigir a mensagem de configuração
+## Tipos de conta
 
-A mensagem `Configure TURSO_DATABASE_URL e TURSO_AUTH_TOKEN...` indica que o projeto Vercel ainda não está recebendo as credenciais do banco remoto. O código não pode gerar essas credenciais por conta própria.
+Cada lançamento possui `tipo`:
 
-### 1. Criar e conectar o banco Turso ao Vercel
+- `pagar`: obrigação com fornecedor, prestador, empregado, tributo ou outra despesa.
+- `receber`: valor esperado de cliente ou outro pagador.
 
-1. Entre no [Vercel](https://vercel.com/) e abra o projeto da EUROLATINA.
-2. Abra a área **Storage** ou **Marketplace / Integrations** do projeto.
-3. Escolha **Turso** / **Turso Cloud** e crie ou conecte um banco de dados.
-4. Durante a conexão, mantenha os nomes padrão das variáveis, sem prefixo personalizado. A integração deve disponibilizar exatamente:
-   - `TURSO_DATABASE_URL`
-   - `TURSO_AUTH_TOKEN`
-5. Abra **Settings → Environment Variables** e confira se as duas variáveis estão disponíveis para **Production**. Marque Preview e Development também se pretende usar esses ambientes.
-6. Não cole o token no código, no GitHub, em mensagens ou no arquivo `.env.example`.
+A Agenda permite filtrar por tipo e visualizar os dois fluxos no mesmo calendário. O Dashboard separa valores em aberto e vencidos a pagar e a receber. Contas antigas sem o campo `tipo` são migradas automaticamente como `pagar`.
 
-Atalho oficial: [Turso Cloud no Vercel Marketplace](https://vercel.com/marketplace/tursocloud/database).
+A coluna legada `fornecedor` é usada internamente para armazenar o nome da contraparte: fornecedor/prestador em contas a pagar ou cliente/pagador em contas a receber.
 
-> Se você já adicionou manualmente as variáveis, confira se os nomes estão escritos exatamente como acima e se os valores são do mesmo banco Turso. Não use valores de exemplo.
+## Conectar ao Turso no Vercel
 
-### 2. Fazer um novo deploy
+O projeto precisa receber estas duas variáveis no ambiente **Production** do Vercel (e também Preview/Development, caso usados):
 
-Depois de conectar o Turso ou alterar as variáveis:
+- `TURSO_DATABASE_URL`
+- `TURSO_AUTH_TOKEN`
 
-1. Abra **Deployments** no Vercel.
-2. Faça **Redeploy** da versão mais recente, ou envie um novo commit pelo GitHub.
-3. Aguarde o deploy terminar e abra o domínio de produção.
+Conecte o banco Turso ao projeto usando o [Turso Cloud Marketplace](https://vercel.com/marketplace/tursocloud/database). Depois confira os nomes em **Settings → Environment Variables** e faça um novo deploy. Os valores devem vir da integração ou do painel Turso; nunca os coloque no código, no Git ou em mensagens.
 
-Alterações nas variáveis de ambiente só entram em vigor em novos deploys; um deploy antigo não passa a usar as novas variáveis automaticamente.
-
-### 3. Confirmar a conexão
-
-Abra no navegador:
-
-```text
-https://SEU-DOMINIO.vercel.app/api/health
-```
-
-Quando estiver conectado, a resposta deve conter:
+O endpoint `GET /api/health` informa se a aplicação conseguiu inicializar e acessar o banco remoto:
 
 ```json
 {
   "status": "ok",
-  "aplicacao": "EUROLATINA - Contas a Pagar",
+  "aplicacao": "EUROLATINA - Gestão Financeira",
   "banco": "Turso Cloud",
   "persistencia": "remota"
 }
 ```
 
-Se retornar HTTP 503, o JSON informa se as variáveis estão ausentes ou se houve falha de conexão/autenticação. Consulte também **Deployments → Runtime Logs** no Vercel.
+Se responder HTTP 503, consulte a mensagem devolvida e **Deployments → Runtime Logs** no Vercel.
 
-## Publicação no Vercel
+## Primeiro administrador
 
-1. Extraia o ZIP e envie o conteúdo da pasta `eurolatina-app` para a raiz do repositório GitHub. O arquivo `package.json` e `server.js` devem ficar na raiz do repositório.
-2. Se preferir manter a pasta `eurolatina-app` dentro do repositório, configure-a como **Root Directory** nas configurações do projeto Vercel.
-3. Importe/conecte o repositório no Vercel. A plataforma detecta a aplicação Express pelo `server.js` exportado; não é necessário definir uma pasta de saída estática.
-4. Conecte o Turso conforme a seção anterior e faça o deploy.
+Antes do primeiro acesso, defina a variável `INITIAL_ADMIN_SETUP_TOKEN` no ambiente Production do Vercel. Gere um valor forte, por exemplo com:
 
-## Desenvolvimento local usando o mesmo banco remoto
+```bash
+openssl rand -hex 32
+```
 
-O modo local também utiliza Turso. Assim, os dados visualizados no computador e no site publicado são os mesmos, desde que apontem para a mesma base remota.
+Faça um novo deploy. Na tela inicial do sistema, informe esse token, o nome, e-mail e uma senha de pelo menos 12 caracteres para criar o primeiro administrador. O cadastro inicial só é permitido quando ainda não existe nenhum usuário.
 
-1. Instale Node.js 20 ou superior.
-2. Instale as dependências:
+Depois de criar o primeiro administrador, remova `INITIAL_ADMIN_SETUP_TOKEN` das variáveis do Vercel e faça outro deploy. O primeiro administrador poderá cadastrar os demais usuários na tela **Administração**.
 
-   ```bash
-   npm install
-   ```
+## Perfis e segurança
 
-3. Copie `.env.example` para `.env.local` e preencha com as credenciais do Turso obtidas no painel/integração:
+- **Administrador (`admin`):** acesso total, gerenciamento de usuários, perfis e consulta da auditoria.
+- **Financeiro (`financeiro`):** consulta e manutenção de contas, pagamentos/recebimentos e documentos.
+- **Consulta (`consulta`):** leitura dos lançamentos; não pode criar, alterar, excluir nem acessar documentos.
 
-   ```bash
-   cp .env.example .env.local
-   ```
+As permissões são verificadas no backend em todas as rotas. A aplicação usa senha derivada com scrypt, sessões com token aleatório armazenado como hash no banco, cookie `HttpOnly`/`SameSite=Strict` (e `Secure` em produção), expiração de 8 horas e bloqueio temporário após tentativas repetidas de login.
 
-4. Verifique a conexão sem revelar o token:
+A trilha de auditoria registra logins bem-sucedidos e falhos, criação/alteração/exclusão de contas, pagamentos, recebimentos, alterações de usuários, operações de documentos e tentativas de acesso negadas. O upload, download e remoção de documentos exigem perfil `admin` ou `financeiro`; downloads e tentativas sem permissão são registrados. Não há rota pública para os arquivos.
 
-   ```bash
-   npm run check:cloud
-   ```
+**Não foi incluída funcionalidade de backup ou recuperação**, conforme definido para este escopo.
 
-5. Inicie a aplicação:
+## Instalação e execução local
 
-   ```bash
-   npm start
-   ```
+A execução local também usa o Turso remoto; assim, o ambiente local e o publicado consultam a mesma base quando configurados com as mesmas credenciais.
 
-6. Acesse `http://localhost:3000`.
+```bash
+npm install
+cp .env.example .env.local
+```
 
-O arquivo `.env.local` é ignorado pelo Git. Nunca compartilhe esse arquivo. Para puxar as variáveis do projeto Vercel para o computador, também é possível usar o Vercel CLI após vincular o diretório ao projeto: `vercel link` e `vercel env pull .env.local`.
+Preencha `.env.local` com `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` e, no primeiro provisionamento, `INITIAL_ADMIN_SETUP_TOKEN`.
 
-## Migração de dados antigos (opcional)
+Confira a conexão e inicie:
 
-A aplicação em execução não lê SQLite local. Se você possui um `database.sqlite` de uma versão antiga e deseja preservar suas contas, use o script de migração uma única vez:
+```bash
+npm run check:cloud
+npm test
+npm start
+```
 
-1. Faça uma cópia de segurança do banco SQLite e da pasta `uploads/` antigos.
-2. Coloque `database.sqlite` e a pasta `uploads/` antiga na raiz desta pasta do projeto.
-3. Preencha `.env.local` com as credenciais do banco Turso de destino.
-4. Execute:
+Acesse `http://localhost:3000`. O arquivo `.env.local` é ignorado pelo Git e não deve ser compartilhado.
 
-   ```bash
-   npm install
-   npm run migrate:turso
-   ```
+## Importar dados de uma versão SQLite anterior (opcional)
 
-5. Confira os registros no Turso e no site publicado antes de remover os arquivos legados.
+Se houver um `database.sqlite` antigo, o utilitário de migração pode importar as contas para o Turso. Ele não faz parte do funcionamento normal do sistema. O utilitário:
 
-O SQLite e a dependência `sqlite3` são usados **somente pelo utilitário de migração**. O servidor `server.js` não importa `sqlite3`, não cria banco local e não usa arquivos locais para armazenar dados.
+1. Lê o arquivo SQLite antigo em modo somente leitura.
+2. Copia lançamentos, tipos (quando presentes) e anexos localizados em `uploads/`.
+3. Define contas antigas sem tipo como `pagar`.
+
+Coloque o banco antigo e, se aplicável, a pasta `uploads/` na raiz do projeto, configure `.env.local` e execute:
+
+```bash
+npm run migrate:turso
+```
+
+Revise os dados no Turso antes de usar a base importada em produção. O script usa a dependência `sqlite3` apenas durante a importação.
 
 ## Testes
 
@@ -128,31 +112,25 @@ O SQLite e a dependência `sqlite3` são usados **somente pelo utilitário de mi
 npm test
 ```
 
-Os testes de interface e de configuração cloud-only rodam sem credenciais remotas. O teste de integração CRUD pode ser habilitado com uma base Turso exclusiva para testes, definindo `TURSO_TEST_DATABASE_URL` e `TURSO_TEST_AUTH_TOKEN` no ambiente. Não use o banco de produção para testes automatizados.
+Os testes de interface e de configuração cloud-only não precisam de credenciais remotas. O teste de integração HTTP com autenticação usa uma base Turso separada de testes; configure `TURSO_TEST_DATABASE_URL` e `TURSO_TEST_AUTH_TOKEN` no ambiente para executá-lo. Não use a base de produção para testes automatizados.
 
-## Funcionalidades
+## Rotas principais da API
 
-- Dashboard consolidado com indicadores de contas a pagar.
-- Agenda financeira mensal com navegação entre meses e seleção de dias.
-- Cadastro, edição, exclusão e liquidação/reabertura de contas.
-- Registro da data de criação e liquidação.
-- Filtros e pesquisa por fornecedor, status, categoria e período.
-- Anexos PDF, JPG, PNG, WEBP, DOC, DOCX, XLS e XLSX, até 3 MB.
-- Migração automática de campos antigos na tabela remota `contas`.
+| Método | Rota | Acesso | Finalidade |
+|---|---|---|---|
+| GET | `/api/health` | Público | Estado da conexão com Turso |
+| GET | `/api/auth/status` | Público | Verifica se o provisionamento inicial é necessário |
+| POST | `/api/auth/setup` | Token inicial | Cria o primeiro administrador |
+| POST | `/api/auth/login` | Público | Autentica o usuário |
+| POST | `/api/auth/logout` | Sessão | Encerra a sessão |
+| GET | `/api/contas?tipo=pagar` | Usuário autenticado | Lista contas (filtro `tipo`: `pagar`, `receber` ou `todos`) |
+| POST | `/api/contas` | Admin/Financeiro | Cria conta |
+| PUT | `/api/contas/:id` | Admin/Financeiro | Edita conta e registra pagamento/recebimento |
+| DELETE | `/api/contas/:id` | Admin/Financeiro | Exclui conta |
+| POST/GET/DELETE | `/api/contas/:id/anexo` | Admin/Financeiro | Envia, acessa ou remove documentos |
+| GET/POST/PATCH | `/api/admin/users` | Admin | Gerencia usuários e perfis |
+| GET | `/api/admin/audit` | Admin | Consulta a trilha de auditoria |
 
-## Rotas da API
+## Observações
 
-| Método | Rota | Finalidade |
-|---|---|---|
-| GET | `/api/health` | Estado da conexão com o Turso Cloud |
-| GET | `/api/contas` | Listar contas; aceita `busca`, `status`, `categoria`, `de` e `ate` |
-| POST | `/api/contas` | Cadastrar conta |
-| PUT | `/api/contas/:id` | Editar conta e/ou alterar status |
-| DELETE | `/api/contas/:id` | Excluir conta e seu anexo |
-| POST | `/api/contas/:id/anexo` | Anexar ou substituir documento no Turso |
-| GET | `/api/contas/:id/anexo` | Visualizar/baixar documento do Turso |
-| DELETE | `/api/contas/:id/anexo` | Remover documento do Turso |
-
-## Observações de segurança
-
-Este pacote acadêmico ainda não implementa autenticação, perfis/permissões, trilha de auditoria ou integração bancária/fiscal. Antes de armazenar dados financeiros reais em produção, adicione login e autorização, política de backup/recuperação, auditoria e controles de acesso aos documentos.
+O sistema não integra diretamente com bancos, emissão fiscal ou gateways de pagamento. Pagamentos e recebimentos são marcados manualmente por usuários autorizados. Antes do uso operacional com dados reais, a empresa deve validar os requisitos jurídicos, contábeis e de segurança da sua política interna.

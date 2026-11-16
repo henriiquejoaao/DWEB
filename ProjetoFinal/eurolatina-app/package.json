@@ -1,7 +1,7 @@
 {
-  "name": "eurolatina-contas-a-pagar",
-  "version": "1.1.0",
-  "description": "Sistema de Contas a Pagar da Metalúrgica Usinagem EUROLATINA com persistência exclusiva no Turso Cloud.",
+  "name": "eurolatina-gestao-financeira",
+  "version": "2.0.0",
+  "description": "Sistema cloud-only de gestão financeira da Metalúrgica Usinagem EUROLATINA, com contas a pagar e a receber, autenticação, RBAC e auditoria.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,7 +12,8 @@
   "dependencies": {
     "@libsql/client": "^0.18.0",
     "dotenv": "^16.4.7",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "helmet": "^8.1.0"
   },
   "devDependencies": {
     "sqlite3": "^5.1.6"

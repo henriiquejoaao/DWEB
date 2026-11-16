@@ -5,7 +5,10 @@ require('dotenv').config({ path: path.join(__dirname, '.env.local') });
 
 const express = require('express');
 const crypto = require('crypto');
+const { promisify } = require('node:util');
+const { gzipSync, gunzipSync } = require('node:zlib');
 const { createClient } = require('@libsql/client');
+const helmet = require('helmet');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -14,6 +17,13 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 // de payload atualmente aplicado às Vercel Functions.
 const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
 const STATUSES = new Set(['pendente', 'liquidada']);
+const ACCOUNT_TYPES = new Set(['pagar', 'receber']);
+const ROLES = new Set(['admin', 'financeiro', 'consulta']);
+const ROLE_LABELS = { admin: 'Administrador', financeiro: 'Financeiro', consulta: 'Consulta' };
+const SESSION_COOKIE = 'eurolatina_session';
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+const SCRYPT_N = 1 << 17;
+const scryptAsync = promisify(crypto.scrypt);
 
 const missingDatabaseVariables = ['TURSO_DATABASE_URL', 'TURSO_AUTH_TOKEN']
   .filter((name) => !String(process.env[name] || '').trim());
@@ -39,7 +49,24 @@ if (missingDatabaseVariables.length === 0) {
 }
 
 app.disable('x-powered-by');
-app.use(express.json({ limit: '12mb' }));
+app.set('trust proxy', 1);
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      baseUri: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
+      fontSrc: ["'self'", 'https://cdnjs.cloudflare.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'"],
+      formAction: ["'self'"]
+    }
+  }
+}));
+app.use(express.json({ limit: '16mb' }));
 app.use(express.static(PUBLIC_DIR));
 
 function normalizeTursoRow(row, columns) {
@@ -111,6 +138,12 @@ function validateAccount(input, partial = false) {
     }
   }
 
+  if (!partial || Object.hasOwn(input, 'tipo')) {
+    const type = String(input.tipo || (partial ? '' : 'pagar')).trim().toLowerCase();
+    if (!ACCOUNT_TYPES.has(type)) errors.push('Tipo de conta inválido. Escolha a pagar ou a receber.');
+    else result.tipo = type;
+  }
+
   for (const field of ['descricao', 'categoria', 'numero_documento']) {
     if (Object.hasOwn(input, field)) {
       const value = String(input[field] ?? '').trim();
@@ -128,7 +161,7 @@ function validateAccount(input, partial = false) {
   return { errors, value: result };
 }
 
-const ACCOUNT_COLUMNS = 'id, fornecedor, data_criacao, data_vencimento, data_liquidacao, valor, status, descricao, categoria, numero_documento, anexo_nome, anexo_arquivo, anexo_mime, anexo_tamanho';
+const ACCOUNT_COLUMNS = 'id, tipo, fornecedor, data_criacao, data_vencimento, data_liquidacao, valor, status, descricao, categoria, numero_documento, anexo_nome, anexo_arquivo, anexo_mime, anexo_tamanho';
 
 function accountById(id) {
   return get(`SELECT ${ACCOUNT_COLUMNS} FROM contas WHERE id = ?`, [id]);
@@ -137,6 +170,7 @@ function accountById(id) {
 async function initializeDatabase() {
   await run(`CREATE TABLE IF NOT EXISTS contas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tipo TEXT NOT NULL DEFAULT 'pagar' CHECK (tipo IN ('pagar', 'receber')),
     fornecedor TEXT NOT NULL,
     data_criacao TEXT,
     data_vencimento TEXT NOT NULL,
@@ -157,6 +191,7 @@ async function initializeDatabase() {
   const columns = await all('PRAGMA table_info(contas)');
   const existing = new Set(columns.map((column) => column.name));
   const additions = [
+    ['tipo', "TEXT NOT NULL DEFAULT 'pagar'"],
     ['data_criacao', 'TEXT'],
     ['data_liquidacao', 'TEXT'],
     ['descricao', 'TEXT'],
@@ -175,8 +210,53 @@ async function initializeDatabase() {
 
   await run("UPDATE contas SET data_criacao = COALESCE(data_criacao, datetime('now', 'localtime'))");
   await run("UPDATE contas SET categoria = COALESCE(NULLIF(categoria, ''), 'Outros')");
+  await run("UPDATE contas SET tipo = 'pagar' WHERE tipo IS NULL OR tipo NOT IN ('pagar', 'receber')");
+  await run('CREATE INDEX IF NOT EXISTS idx_contas_tipo ON contas(tipo)');
   await run('CREATE INDEX IF NOT EXISTS idx_contas_vencimento ON contas(data_vencimento)');
   await run('CREATE INDEX IF NOT EXISTS idx_contas_status ON contas(status)');
+
+  await run(`CREATE TABLE IF NOT EXISTS usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    nome TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('admin', 'financeiro', 'consulta')),
+    password_hash TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    last_login_at TEXT
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS sessoes (
+    token_hash TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES usuarios(id)
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS auditoria (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor_user_id INTEGER,
+    actor_email TEXT,
+    action TEXT NOT NULL,
+    target_type TEXT,
+    target_id TEXT,
+    metadata TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TEXT NOT NULL
+  )`);
+  await run(`CREATE TABLE IF NOT EXISTS auth_rate_limits (
+    rate_key TEXT PRIMARY KEY,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    window_started_at TEXT NOT NULL,
+    blocked_until TEXT
+  )`);
+  await run('CREATE INDEX IF NOT EXISTS idx_sessoes_user_id ON sessoes(user_id)');
+  await run('CREATE INDEX IF NOT EXISTS idx_sessoes_expires_at ON sessoes(expires_at)');
+  await run('CREATE INDEX IF NOT EXISTS idx_auditoria_created_at ON auditoria(created_at)');
+  await run('CREATE INDEX IF NOT EXISTS idx_auditoria_actor ON auditoria(actor_user_id)');
+  // Limpa sessões expiradas no início de cada instância serverless.
+  await run('DELETE FROM sessoes WHERE expires_at <= ?', [new Date().toISOString()]);
 }
 
 const databaseReady = (async () => {
@@ -200,14 +280,15 @@ app.get('/api/health', async (req, res) => {
   }
   return res.json({
     status: 'ok',
-    aplicacao: 'EUROLATINA - Contas a Pagar',
+    aplicacao: 'EUROLATINA - Gestão Financeira',
     banco: 'Turso Cloud',
     persistencia: 'remota'
   });
 });
 
-// Todas as rotas de dados só são liberadas depois de conectar e preparar o banco remoto.
-app.use(async (req, res, next) => {
+// Todas as rotas da API dependem do banco remoto e respeitam origem same-site.
+app.use('/api', async (req, res, next) => {
+  res.setHeader('Cache-Control', 'private, no-store');
   try {
     await databaseReady;
     if (databaseInitError) {
@@ -219,14 +300,290 @@ app.use(async (req, res, next) => {
   }
 });
 
+function safeUser(user) {
+  if (!user) return null;
+  return { id: Number(user.id), email: user.email, nome: user.nome, role: user.role, role_label: ROLE_LABELS[user.role] || user.role };
+}
+
+function getCookie(req, name) {
+  const header = req.headers.cookie || '';
+  for (const item of header.split(';')) {
+    const separator = item.indexOf('=');
+    if (separator < 0) continue;
+    if (item.slice(0, separator).trim() === name) return decodeURIComponent(item.slice(separator + 1).trim());
+  }
+  return null;
+}
+
+function cookieOptions() {
+  return `Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}${process.env.NODE_ENV === 'production' || process.env.VERCEL ? '; Secure' : ''}`;
+}
+
+function setSessionCookie(res, token) {
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=${encodeURIComponent(token)}; ${cookieOptions()}`);
+}
+
+function clearSessionCookie(res) {
+  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${process.env.NODE_ENV === 'production' || process.env.VERCEL ? '; Secure' : ''}`);
+}
+
+function sha256(value) {
+  return crypto.createHash('sha256').update(String(value)).digest('hex');
+}
+
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  const derived = await scryptAsync(password, salt, 64, { N: SCRYPT_N, r: 8, p: 1, maxmem: 256 * 1024 * 1024 });
+  return `scrypt$${SCRYPT_N}$8$1$${salt.toString('base64url')}$${Buffer.from(derived).toString('base64url')}`;
+}
+
+async function verifyPassword(password, encoded) {
+  try {
+    const [algorithm, nText, rText, pText, saltText, hashText] = String(encoded || '').split('$');
+    if (algorithm !== 'scrypt') return false;
+    const N = Number(nText), r = Number(rText), p = Number(pText);
+    if (![N, r, p].every(Number.isInteger) || N < 16384 || N > (1 << 18) || r < 1 || p < 1) return false;
+    const salt = Buffer.from(saltText, 'base64url');
+    const expected = Buffer.from(hashText, 'base64url');
+    if (salt.length < 16 || expected.length !== 64) return false;
+    const actual = Buffer.from(await scryptAsync(password, salt, expected.length, { N, r, p, maxmem: 256 * 1024 * 1024 }));
+    return crypto.timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
+}
+
+function passwordsAreValid(password) {
+  return typeof password === 'string' && password.length >= 12 && password.length <= 128;
+}
+
+async function writeAudit(req, action, targetType = null, targetId = null, metadata = {}) {
+  await run(
+    `INSERT INTO auditoria (actor_user_id, actor_email, action, target_type, target_id, metadata, ip_address, user_agent, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [req.user?.id ?? null, req.user?.email ?? null, action, targetType, targetId == null ? null : String(targetId),
+      JSON.stringify(metadata || {}), String(req.ip || '').slice(0, 64), String(req.get('user-agent') || '').slice(0, 255), new Date().toISOString()]
+  );
+}
+
+function serializeAccountForUser(account, user) {
+  if (!account) return account;
+  const result = { ...account };
+  if (!['admin', 'financeiro'].includes(user?.role)) {
+    delete result.anexo_nome;
+    delete result.anexo_arquivo;
+    delete result.anexo_mime;
+    delete result.anexo_tamanho;
+  }
+  return result;
+}
+
+function requireRole(...roles) {
+  return async (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: 'Faça login para continuar.' });
+    if (!roles.includes(req.user.role)) {
+      // Tentativas de acesso negado a recursos restritos também ficam auditadas.
+      try {
+        const isDocument = req.path.endsWith('/anexo');
+        await writeAudit(req, 'authorization.denied', isDocument ? 'document' : 'api', req.params?.id || null, {
+          method: req.method,
+          path: req.path,
+          role: req.user.role
+        });
+      } catch (auditError) {
+        console.error('Não foi possível registrar tentativa de acesso negado:', auditError);
+      }
+      return res.status(403).json({ error: 'Seu perfil não tem permissão para esta operação.' });
+    }
+    return next();
+  };
+}
+
+// SameSite=Strict é a primeira barreira contra CSRF; a validação de Origin complementa a proteção.
+app.use('/api', (req, res, next) => {
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+  const origin = req.get('origin');
+  if (!origin) return next();
+  try {
+    const originHost = new URL(origin).host.toLowerCase();
+    const expectedHost = String(req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim().toLowerCase();
+    if (originHost !== expectedHost) return res.status(403).json({ error: 'Origem da requisição não autorizada.' });
+    return next();
+  } catch {
+    return res.status(403).json({ error: 'Origem da requisição inválida.' });
+  }
+});
+
+app.use('/api', async (req, res, next) => {
+  try {
+    const token = getCookie(req, SESSION_COOKIE);
+    if (!token || token.length < 40 || token.length > 200) return next();
+    const tokenHash = sha256(token);
+    const session = await get(
+      `SELECT u.id, u.email, u.nome, u.role, u.active, s.expires_at
+       FROM sessoes s JOIN usuarios u ON u.id = s.user_id
+       WHERE s.token_hash = ? AND s.expires_at > ?`, [tokenHash, new Date().toISOString()]
+    );
+    if (session && Number(session.active) === 1) {
+      req.user = safeUser(session);
+      req.sessionTokenHash = tokenHash;
+    } else {
+      await run('DELETE FROM sessoes WHERE token_hash = ?', [tokenHash]);
+    }
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.get('/api/auth/status', async (req, res, next) => {
+  try {
+    const count = await get('SELECT COUNT(*) AS total FROM usuarios');
+    const setupRequired = Number(count?.total || 0) === 0;
+    return res.json({ setupRequired, setupEnabled: Boolean(String(process.env.INITIAL_ADMIN_SETUP_TOKEN || '').trim()), authenticated: Boolean(req.user), user: safeUser(req.user) });
+  } catch (error) { return next(error); }
+});
+
+app.post('/api/auth/setup', async (req, res, next) => {
+  try {
+    const setupRateKey = `initial-setup|${String(req.ip || 'unknown')}`;
+    const rateRecord = await get('SELECT blocked_until FROM auth_rate_limits WHERE rate_key = ?', [sha256(setupRateKey)]);
+    if (rateRecord?.blocked_until && new Date(rateRecord.blocked_until).getTime() > Date.now()) {
+      return res.status(429).json({ error: 'Muitas tentativas de configuração. Aguarde 15 minutos.' });
+    }
+    const configuredToken = String(process.env.INITIAL_ADMIN_SETUP_TOKEN || '');
+    const suppliedToken = String(req.body?.setupToken || '');
+    const tokenBuffer = Buffer.from(configuredToken);
+    const suppliedBuffer = Buffer.from(suppliedToken);
+    const tokenMatches = tokenBuffer.length > 0 && tokenBuffer.length === suppliedBuffer.length && crypto.timingSafeEqual(tokenBuffer, suppliedBuffer);
+    if (!tokenMatches) {
+      const limit = await updateLoginLimit(setupRateKey, true);
+      await writeAudit(req, 'auth.initial_setup_failed', 'auth', null, { blocked: limit.blocked });
+      return res.status(limit.blocked ? 429 : 403).json({ error: limit.blocked ? 'Muitas tentativas de configuração. Aguarde 15 minutos.' : 'Token inicial inválido ou não configurado no Vercel.' });
+    }
+    await updateLoginLimit(setupRateKey, false);
+    const count = await get('SELECT COUNT(*) AS total FROM usuarios');
+    if (Number(count?.total || 0) > 0) return res.status(409).json({ error: 'A configuração inicial já foi concluída. Entre com seu usuário.' });
+
+    const nome = String(req.body?.nome || '').trim().slice(0, 100);
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = req.body?.password;
+    if (!nome || nome.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 180 || !passwordsAreValid(password)) {
+      return res.status(400).json({ error: 'Informe nome, e-mail válido e senha com pelo menos 12 caracteres (máximo 128).' });
+    }
+    const passwordHash = await hashPassword(password);
+    const now = new Date().toISOString();
+    // A verificação e a inserção acontecem em uma única instrução para impedir
+    // que duas solicitações simultâneas criem dois administradores iniciais.
+    const created = await run(
+      `INSERT INTO usuarios (email, nome, role, password_hash, active, created_at, updated_at)
+       SELECT ?, ?, 'admin', ?, 1, ?, ?
+       WHERE NOT EXISTS (SELECT 1 FROM usuarios)`, [email, nome, passwordHash, now, now]
+    );
+    if (created.changes !== 1) {
+      return res.status(409).json({ error: 'A configuração inicial já foi concluída. Entre com seu usuário.' });
+    }
+    const user = await get('SELECT id, email, nome, role FROM usuarios WHERE email = ?', [email]);
+    if (!user) throw new Error('Não foi possível localizar o administrador inicial recém-criado.');
+    req.user = safeUser(user);
+    await writeAudit(req, 'auth.initial_admin_created', 'usuario', user.id, { email });
+    const token = crypto.randomBytes(32).toString('base64url');
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+    await run('INSERT INTO sessoes (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)',
+      [sha256(token), user.id, expiresAt, now]);
+    setSessionCookie(res, token);
+    return res.status(201).json({ user: safeUser(user), setupComplete: true });
+  } catch (error) {
+    if (String(error.message || '').includes('UNIQUE')) return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
+    return next(error);
+  }
+});
+
+async function updateLoginLimit(rateKey, failed) {
+  const now = new Date();
+  const key = sha256(rateKey);
+  const current = await get('SELECT attempts, window_started_at, blocked_until FROM auth_rate_limits WHERE rate_key = ?', [key]);
+  if (!failed) {
+    await run('DELETE FROM auth_rate_limits WHERE rate_key = ?', [key]);
+    return { blocked: false };
+  }
+  const windowStart = current && now.getTime() - new Date(current.window_started_at).getTime() < 15 * 60 * 1000
+    ? current.window_started_at : now.toISOString();
+  const attempts = (windowStart === current?.window_started_at ? Number(current.attempts) : 0) + 1;
+  const blockedUntil = attempts >= 5 ? new Date(now.getTime() + 15 * 60 * 1000).toISOString() : null;
+  await run(
+    `INSERT INTO auth_rate_limits (rate_key, attempts, window_started_at, blocked_until) VALUES (?, ?, ?, ?)
+     ON CONFLICT(rate_key) DO UPDATE SET attempts = excluded.attempts, window_started_at = excluded.window_started_at, blocked_until = excluded.blocked_until`,
+    [key, attempts, windowStart, blockedUntil]
+  );
+  return { blocked: Boolean(blockedUntil), blockedUntil };
+}
+
+app.post('/api/auth/login', async (req, res, next) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
+    const ip = String(req.ip || 'unknown');
+    const rateKey = `${email}|${ip}`;
+    const rateRecord = await get('SELECT blocked_until FROM auth_rate_limits WHERE rate_key = ?', [sha256(rateKey)]);
+    if (rateRecord?.blocked_until && new Date(rateRecord.blocked_until).getTime() > Date.now()) {
+      return res.status(429).json({ error: 'Muitas tentativas. Aguarde 15 minutos antes de tentar novamente.' });
+    }
+    const user = email ? await get('SELECT id, email, nome, role, active, password_hash FROM usuarios WHERE email = ?', [email]) : null;
+    const valid = Boolean(user && Number(user.active) === 1 && await verifyPassword(password, user.password_hash));
+    if (!valid) {
+      const limit = await updateLoginLimit(rateKey, true);
+      await writeAudit(req, 'auth.login_failed', 'auth', null, { email: email.slice(0, 180), blocked: limit.blocked });
+      return res.status(limit.blocked ? 429 : 401).json({ error: limit.blocked ? 'Muitas tentativas. Conta temporariamente bloqueada por 15 minutos.' : 'E-mail ou senha inválidos.' });
+    }
+    await updateLoginLimit(rateKey, false);
+    await run('DELETE FROM sessoes WHERE expires_at <= ?', [new Date().toISOString()]);
+    const token = crypto.randomBytes(32).toString('base64url');
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+    await run('INSERT INTO sessoes (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)',
+      [sha256(token), user.id, expiresAt, now]);
+    await run('UPDATE usuarios SET last_login_at = ?, updated_at = ? WHERE id = ?', [now, now, user.id]);
+    req.user = safeUser(user);
+    await writeAudit(req, 'auth.login_success', 'usuario', user.id);
+    setSessionCookie(res, token);
+    return res.json({ user: safeUser(user), expiresAt });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+app.post('/api/auth/logout', async (req, res, next) => {
+  try {
+    if (req.sessionTokenHash) {
+      await writeAudit(req, 'auth.logout', 'usuario', req.user.id);
+      await run('DELETE FROM sessoes WHERE token_hash = ?', [req.sessionTokenHash]);
+    }
+    clearSessionCookie(res);
+    return res.json({ loggedOut: true });
+  } catch (error) { return next(error); }
+});
+
+app.get('/api/auth/me', (req, res) => req.user
+  ? res.json({ user: safeUser(req.user) })
+  : res.status(401).json({ error: 'Não autenticado.' }));
+
+// Nenhum dado financeiro ou documento é acessível sem uma sessão válida.
+app.use('/api', (req, res, next) => {
+  if (req.path.startsWith('/auth/')) return next();
+  if (!req.user) return res.status(401).json({ error: 'Faça login para continuar.' });
+  return next();
+});
+
 // Lista as contas e aceita filtros opcionais.
-app.get('/api/contas', async (req, res, next) => {
+app.get('/api/contas', requireRole('admin', 'financeiro', 'consulta'), async (req, res, next) => {
   try {
     const conditions = [];
     const params = [];
     const search = String(req.query.busca || '').trim();
     const status = String(req.query.status || '').trim();
     const categoria = String(req.query.categoria || '').trim();
+    const tipo = String(req.query.tipo || '').trim();
     const de = String(req.query.de || '').trim();
     const ate = String(req.query.ate || '').trim();
 
@@ -238,6 +595,11 @@ app.get('/api/contas', async (req, res, next) => {
       if (!STATUSES.has(status)) return res.status(400).json({ error: 'Filtro de status inválido.' });
       conditions.push('status = ?');
       params.push(status);
+    }
+    if (tipo && tipo !== 'todos') {
+      if (!ACCOUNT_TYPES.has(tipo)) return res.status(400).json({ error: 'Filtro de tipo inválido.' });
+      conditions.push('tipo = ?');
+      params.push(tipo);
     }
     if (categoria && categoria !== 'todas') {
       conditions.push('categoria = ?');
@@ -256,33 +618,35 @@ app.get('/api/contas', async (req, res, next) => {
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const rows = await all(`SELECT ${ACCOUNT_COLUMNS} FROM contas ${where} ORDER BY data_vencimento ASC, id DESC`, params);
-    res.json(rows);
+    res.json(rows.map((row) => serializeAccountForUser(row, req.user)));
   } catch (error) {
     next(error);
   }
 });
 
-// Cadastra uma nova conta a pagar.
-app.post('/api/contas', async (req, res, next) => {
+// Cadastra uma conta a pagar ou a receber.
+app.post('/api/contas', requireRole('admin', 'financeiro'), async (req, res, next) => {
   try {
     const { errors, value } = validateAccount(req.body || {});
     if (errors.length) return res.status(400).json({ error: errors.join(' ') });
 
     const createdAt = new Date().toISOString();
     const result = await run(
-      `INSERT INTO contas (fornecedor, data_criacao, data_vencimento, valor, status, descricao, categoria, numero_documento)
-       VALUES (?, ?, ?, ?, 'pendente', ?, ?, ?)`,
-      [value.fornecedor, createdAt, value.data_vencimento, value.valor,
+      `INSERT INTO contas (tipo, fornecedor, data_criacao, data_vencimento, valor, status, descricao, categoria, numero_documento)
+       VALUES (?, ?, ?, ?, ?, 'pendente', ?, ?, ?)`,
+      [value.tipo || 'pagar', value.fornecedor, createdAt, value.data_vencimento, value.valor,
         value.descricao || null, value.categoria || 'Outros', value.numero_documento || null]
     );
-    res.status(201).json(await accountById(result.lastID));
+    const createdAccount = await accountById(result.lastID);
+    await writeAudit(req, 'account.created', 'conta', result.lastID, { tipo: value.tipo || 'pagar', contraparte: value.fornecedor, valor: value.valor, data_vencimento: value.data_vencimento });
+    res.status(201).json(serializeAccountForUser(createdAccount, req.user));
   } catch (error) {
     next(error);
   }
 });
 
 // Edita os dados da conta e/ou altera seu status.
-app.put('/api/contas/:id', async (req, res, next) => {
+app.put('/api/contas/:id', requireRole('admin', 'financeiro'), async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Identificador inválido.' });
@@ -299,20 +663,30 @@ app.put('/api/contas/:id', async (req, res, next) => {
     const fields = Object.keys(value);
     const assignments = fields.map((field) => `${field} = ?`).join(', ');
     await run(`UPDATE contas SET ${assignments} WHERE id = ?`, [...fields.map((field) => value[field]), id]);
-    res.json(await accountById(id));
+    const updatedType = value.tipo || current.tipo || 'pagar';
+    let auditAction = 'account.updated';
+    if (value.status === 'liquidada') auditAction = updatedType === 'receber' ? 'account.received' : 'account.paid';
+    else if (value.status === 'pendente') auditAction = 'account.reopened';
+    await writeAudit(req, auditAction, 'conta', id, {
+      fields,
+      tipo_anterior: current.tipo || 'pagar',
+      tipo_atual: updatedType
+    });
+    res.json(serializeAccountForUser(await accountById(id), req.user));
   } catch (error) {
     next(error);
   }
 });
 
 // Remove a conta e seu documento (ambos persistidos no banco remoto).
-app.delete('/api/contas/:id', async (req, res, next) => {
+app.delete('/api/contas/:id', requireRole('admin', 'financeiro'), async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Identificador inválido.' });
     const current = await accountById(id);
     if (!current) return res.status(404).json({ error: 'Conta não encontrada.' });
     await run('DELETE FROM contas WHERE id = ?', [id]);
+    await writeAudit(req, 'account.deleted', 'conta', id, { tipo: current.tipo || 'pagar', contraparte: current.fornecedor, valor: current.valor });
     res.json({ deleted: true, id });
   } catch (error) {
     next(error);
@@ -331,7 +705,7 @@ const allowedMimeTypes = new Map([
 ]);
 
 // Recebe o documento e salva o conteúdo binário diretamente no Turso Cloud.
-app.post('/api/contas/:id/anexo', async (req, res, next) => {
+app.post('/api/contas/:id/anexo', requireRole('admin', 'financeiro'), async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Identificador inválido.' });
@@ -360,14 +734,15 @@ app.post('/api/contas/:id/anexo', async (req, res, next) => {
       'UPDATE contas SET anexo_nome = ?, anexo_arquivo = ?, anexo_mime = ?, anexo_tamanho = ?, anexo_conteudo = ? WHERE id = ?',
       [safeOriginalName, remoteFileId, normalizedMime, buffer.length, buffer, id]
     );
-    res.json(await accountById(id));
+    await writeAudit(req, 'document.uploaded', 'conta', id, { nome: safeOriginalName, mime: normalizedMime, tamanho: buffer.length });
+    res.json(serializeAccountForUser(await accountById(id), req.user));
   } catch (error) {
     next(error);
   }
 });
 
 // Faz download/visualização do documento diretamente do BLOB no Turso Cloud.
-app.get('/api/contas/:id/anexo', async (req, res, next) => {
+app.get('/api/contas/:id/anexo', requireRole('admin', 'financeiro'), async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Identificador inválido.' });
@@ -378,6 +753,8 @@ app.get('/api/contas/:id/anexo', async (req, res, next) => {
     if (!account.anexo_arquivo || !account.anexo_conteudo) {
       return res.status(404).json({ error: 'Esta conta não possui documento armazenado no Turso Cloud.' });
     }
+    await writeAudit(req, 'document.downloaded', 'conta', id, { nome: account.anexo_nome || null, mime: account.anexo_mime || null });
+    res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('Content-Type', account.anexo_mime || 'application/octet-stream');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.attachment(account.anexo_nome || 'documento');
@@ -388,7 +765,7 @@ app.get('/api/contas/:id/anexo', async (req, res, next) => {
 });
 
 // Desvincula e apaga o documento no mesmo banco remoto.
-app.delete('/api/contas/:id/anexo', async (req, res, next) => {
+app.delete('/api/contas/:id/anexo', requireRole('admin', 'financeiro'), async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Identificador inválido.' });
@@ -396,10 +773,99 @@ app.delete('/api/contas/:id/anexo', async (req, res, next) => {
     if (!account) return res.status(404).json({ error: 'Conta não encontrada.' });
     if (!account.anexo_arquivo) return res.status(404).json({ error: 'Esta conta não possui documento anexado.' });
     await run('UPDATE contas SET anexo_nome = NULL, anexo_arquivo = NULL, anexo_mime = NULL, anexo_tamanho = NULL, anexo_conteudo = NULL WHERE id = ?', [id]);
-    res.json(await accountById(id));
+    await writeAudit(req, 'document.deleted', 'conta', id, { nome: account.anexo_nome || null });
+    res.json(serializeAccountForUser(await accountById(id), req.user));
   } catch (error) {
     next(error);
   }
+});
+
+// Administração: somente o perfil admin pode gerenciar usuários e consultar a auditoria.
+app.get('/api/admin/users', requireRole('admin'), async (req, res, next) => {
+  try {
+    const users = await all(`SELECT id, email, nome, role, active, created_at, updated_at, last_login_at
+                             FROM usuarios ORDER BY nome COLLATE NOCASE ASC`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json(users.map((user) => ({ ...user, active: Number(user.active) === 1 })));
+  } catch (error) { next(error); }
+});
+
+app.post('/api/admin/users', requireRole('admin'), async (req, res, next) => {
+  try {
+    const nome = String(req.body?.nome || '').trim().slice(0, 100);
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const role = String(req.body?.role || 'consulta');
+    const password = req.body?.password;
+    if (nome.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 180 || !ROLES.has(role) || !passwordsAreValid(password)) {
+      return res.status(400).json({ error: 'Informe nome, e-mail válido, perfil e senha com pelo menos 12 caracteres.' });
+    }
+    const now = new Date().toISOString();
+    const passwordHash = await hashPassword(password);
+    const result = await run(
+      'INSERT INTO usuarios (email, nome, role, password_hash, active, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)',
+      [email, nome, role, passwordHash, now, now]
+    );
+    await writeAudit(req, 'user.created', 'usuario', result.lastID, { email, role });
+    res.status(201).json({ id: result.lastID, email, nome, role, active: true });
+  } catch (error) {
+    if (String(error.message || '').includes('UNIQUE')) return res.status(409).json({ error: 'Já existe um usuário com esse e-mail.' });
+    next(error);
+  }
+});
+
+app.patch('/api/admin/users/:id', requireRole('admin'), async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Identificador inválido.' });
+    const current = await get('SELECT id, email, nome, role, active FROM usuarios WHERE id = ?', [id]);
+    if (!current) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    const nome = req.body?.nome === undefined ? current.nome : String(req.body.nome).trim().slice(0, 100);
+    const role = req.body?.role === undefined ? current.role : String(req.body.role);
+    const active = req.body?.active === undefined
+      ? Number(current.active)
+      : (req.body.active === true ? 1 : req.body.active === false ? 0 : -1);
+    if (nome.length < 2 || !ROLES.has(role) || ![0, 1].includes(active)) return res.status(400).json({ error: 'Nome, perfil ou estado inválido.' });
+    if (id === req.user.id && active === 0) return res.status(400).json({ error: 'Você não pode desativar seu próprio usuário.' });
+    if (current.role === 'admin' && Number(current.active) === 1 && (role !== 'admin' || active === 0)) {
+      const others = await get("SELECT COUNT(*) AS total FROM usuarios WHERE role = 'admin' AND active = 1 AND id <> ?", [id]);
+      if (Number(others?.total || 0) === 0) return res.status(409).json({ error: 'O sistema precisa manter ao menos um administrador ativo.' });
+    }
+    const now = new Date().toISOString();
+    await run('UPDATE usuarios SET nome = ?, role = ?, active = ?, updated_at = ? WHERE id = ?', [nome, role, active, now, id]);
+    if (active === 0) await run('DELETE FROM sessoes WHERE user_id = ?', [id]);
+    await writeAudit(req, 'user.updated', 'usuario', id, { role_anterior: current.role, role_novo: role, active_anterior: Number(current.active), active_novo: active });
+    res.json({ id, email: current.email, nome, role, active: Boolean(active) });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/admin/users/:id/reset-password', requireRole('admin'), async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const password = req.body?.password;
+    if (!Number.isInteger(id) || id < 1) return res.status(400).json({ error: 'Identificador inválido.' });
+    if (!passwordsAreValid(password)) return res.status(400).json({ error: 'A nova senha deve ter pelo menos 12 caracteres (máximo 128).' });
+    const target = await get('SELECT id, email FROM usuarios WHERE id = ?', [id]);
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    const passwordHash = await hashPassword(password);
+    await run('UPDATE usuarios SET password_hash = ?, updated_at = ? WHERE id = ?', [passwordHash, new Date().toISOString(), id]);
+    await run('DELETE FROM sessoes WHERE user_id = ?', [id]);
+    await writeAudit(req, 'user.password_reset', 'usuario', id, { email: target.email, sessions_revoked: true });
+    res.json({ updated: true, sessionsRevoked: true });
+  } catch (error) { next(error); }
+});
+
+app.get('/api/admin/audit', requireRole('admin'), async (req, res, next) => {
+  try {
+    const requested = Number(req.query.limit || 100);
+    const limit = Number.isInteger(requested) ? Math.min(200, Math.max(1, requested)) : 100;
+    const events = await all(
+      `SELECT id, actor_user_id, actor_email, action, target_type, target_id, metadata, ip_address, user_agent, created_at
+       FROM auditoria ORDER BY id DESC LIMIT ?`, [limit]
+    );
+    await writeAudit(req, 'audit.viewed', 'auditoria', null, { returned: events.length });
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json(events.map((event) => ({ ...event, metadata: (() => { try { return JSON.parse(event.metadata || '{}'); } catch { return {}; } })() })));
+  } catch (error) { next(error); }
 });
 
 app.use('/api', (req, res) => res.status(404).json({ error: 'Endpoint não encontrado.' }));

@@ -1,7 +1,7 @@
 'use strict';
 
 // Copia as contas de database.sqlite local para o banco Turso configurado nas variáveis.
-// Execute uma única vez, com o banco Turso de destino vazio ou após fazer backup dele.
+// Utilitário opcional para importar contas antigas do SQLite para o banco Turso remoto.
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -40,6 +40,7 @@ async function main() {
   try {
     await remote.execute(`CREATE TABLE IF NOT EXISTS contas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tipo TEXT NOT NULL DEFAULT 'pagar' CHECK (tipo IN ('pagar', 'receber')),
       fornecedor TEXT NOT NULL,
       data_criacao TEXT,
       data_vencimento TEXT NOT NULL,
@@ -59,7 +60,7 @@ async function main() {
     const schema = await remote.execute('PRAGMA table_info(contas)');
     const existing = new Set(schema.rows.map((row) => row.name));
     const additions = [
-      ['data_criacao', 'TEXT'], ['data_liquidacao', 'TEXT'], ['descricao', 'TEXT'],
+      ['tipo', "TEXT NOT NULL DEFAULT 'pagar'"], ['data_criacao', 'TEXT'], ['data_liquidacao', 'TEXT'], ['descricao', 'TEXT'],
       ['categoria', "TEXT DEFAULT 'Outros'"], ['numero_documento', 'TEXT'],
       ['anexo_nome', 'TEXT'], ['anexo_arquivo', 'TEXT'], ['anexo_mime', 'TEXT'],
       ['anexo_tamanho', 'INTEGER'], ['anexo_conteudo', 'BLOB']
@@ -67,6 +68,8 @@ async function main() {
     for (const [name, type] of additions) {
       if (!existing.has(name)) await remote.execute(`ALTER TABLE contas ADD COLUMN ${name} ${type}`);
     }
+    await remote.execute("UPDATE contas SET tipo = 'pagar' WHERE tipo IS NULL OR tipo NOT IN ('pagar', 'receber')");
+    await remote.execute('CREATE INDEX IF NOT EXISTS idx_contas_tipo ON contas(tipo)');
     await remote.execute('CREATE INDEX IF NOT EXISTS idx_contas_vencimento ON contas(data_vencimento)');
     await remote.execute('CREATE INDEX IF NOT EXISTS idx_contas_status ON contas(status)');
 
@@ -98,12 +101,12 @@ async function main() {
 
       await remote.execute({
         sql: `INSERT OR REPLACE INTO contas (
-          id, fornecedor, data_criacao, data_vencimento, data_liquidacao, valor, status,
+          id, tipo, fornecedor, data_criacao, data_vencimento, data_liquidacao, valor, status,
           descricao, categoria, numero_documento, anexo_nome, anexo_arquivo,
           anexo_mime, anexo_tamanho, anexo_conteudo
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
-          row.id, row.fornecedor, row.data_criacao || null, row.data_vencimento,
+          row.id, row.tipo === 'receber' ? 'receber' : 'pagar', row.fornecedor, row.data_criacao || null, row.data_vencimento,
           row.data_liquidacao || null, row.valor, row.status || 'pendente',
           row.descricao || null, row.categoria || 'Outros', row.numero_documento || null,
           attachmentName, attachmentFile, attachmentMime, attachmentSize,

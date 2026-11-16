@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#12243a">
-  <meta name="description" content="Painel de gestão de contas a pagar da Metalúrgica Usinagem EUROLATINA.">
-  <title>Contas a Pagar | Metalúrgica Usinagem EUROLATINA</title>
+  <meta name="description" content="Painel de gestão de contas a pagar e a receber da Metalúrgica Usinagem EUROLATINA.">
+  <title>Gestão Financeira | Metalúrgica Usinagem EUROLATINA</title>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
@@ -121,6 +121,8 @@
     .tag.paid-tag { background: var(--green-soft); color: #18734c; }
     .tag.overdue-tag { background: var(--red-soft); color: #b53b3b; }
     .tag.today-tag { background: var(--yellow-soft); color: #8b6411; }
+    .tag.receivable-tag { background: #eaf7f5; color: #147a70; }
+    .tag.payable-tag { background: #eaf3fc; color: #2b68a5; }
     .card-description { color: #748195; font-size: .76rem; line-height: 1.4; margin: 9px 0 0; overflow-wrap: anywhere; }
     .card-reference { font-size: .71rem; color: #8895a6; margin-top: 7px; }
     .card-value { text-align: right; color: #1d2f45; font-size: 1.12rem; font-weight: 850; margin: 12px 0 10px; }
@@ -147,9 +149,9 @@
     .urgency-item { display: grid; grid-template-columns: minmax(120px, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border-radius: 9px; background: #f7f9fc; }
     .urgency-label { display: flex; align-items: center; gap: 9px; color: #43546a; font-size: .82rem; font-weight: 750; }
     .urgency-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
-    .urgency-item.overdue .urgency-dot { background: var(--red); }
-    .urgency-item.today .urgency-dot { background: #d7a329; }
-    .urgency-item.week .urgency-dot { background: var(--blue); }
+    .urgency-item.overdue .urgency-dot, .urgency-item.overdue-pagar .urgency-dot, .urgency-item.overdue-receber .urgency-dot { background: var(--red); }
+    .urgency-item.today .urgency-dot, .urgency-item.today-pagar .urgency-dot, .urgency-item.today-receber .urgency-dot { background: #d7a329; }
+    .urgency-item.week .urgency-dot, .urgency-item.week-pagar .urgency-dot, .urgency-item.week-receber .urgency-dot { background: var(--blue); }
     .urgency-metrics { text-align: right; }
     .urgency-metrics strong { display: block; color: var(--navy); font-size: .9rem; }
     .urgency-metrics span { color: #8996a6; font-size: .7rem; }
@@ -176,12 +178,13 @@
     .page-heading-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 
     /* Agenda financeira mensal */
-    .calendar-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 4px 0 17px; }
+    .calendar-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0 17px; }
     .calendar-summary-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px; background: #fff; border: 1px solid var(--line); border-radius: 11px; box-shadow: var(--shadow); min-width: 0; }
     .calendar-summary-label { display: block; color: var(--muted); font-size: .73rem; font-weight: 700; }
     .calendar-summary-value { display: block; margin-top: 5px; color: var(--navy); font-size: 1.04rem; font-weight: 850; overflow-wrap: anywhere; }
     .calendar-summary-icon { width: 35px; height: 35px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 10px; background: var(--blue-soft); color: var(--blue); }
     .calendar-summary-card.paid .calendar-summary-icon { background: var(--green-soft); color: var(--green); }
+    .calendar-summary-card.receivable .calendar-summary-icon { background: #eaf7f5; color: #147a70; }
     .calendar-layout { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(290px, .85fr); gap: 16px; align-items: start; }
     .calendar-panel, .selected-day-panel { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
     .calendar-panel { padding: 17px; }
@@ -208,6 +211,8 @@
     .day-event.today { color: #87600e; background: #fff6df; }
     .day-event.upcoming { color: #28649d; background: #eaf3fc; }
     .day-event.paid { color: #18734c; background: #eaf7f0; }
+    .day-event.receivable { box-shadow: inset 3px 0 #16877c; padding-left: 8px; }
+    .day-event.payable { box-shadow: inset 3px 0 #3478bd; padding-left: 8px; }
     .day-more { color: #7d8a9b; font-size: .61rem; font-weight: 750; padding: 2px 4px; }
     .day-total { display: block; margin-top: 5px; color: #596b80; font-size: .62rem; font-weight: 850; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .calendar-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 13px; color: #788699; font-size: .69rem; }
@@ -301,7 +306,7 @@
       .app-footer img { width: 68px; }
       .urgency-item { grid-template-columns: 1fr auto; }
       .category-row { grid-template-columns: minmax(85px, 1fr) minmax(55px, 1fr) auto; gap: 7px; }
-      .calendar-summary { grid-template-columns: 1fr; gap: 8px; }
+      .calendar-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
       .calendar-summary-card { padding: 10px 12px; }
       .calendar-panel, .selected-day-panel { padding: 11px; }
       .calendar-toolbar { align-items: flex-start; flex-direction: column; }
@@ -316,23 +321,90 @@
       .selected-day-heading { flex-direction: column; }
       .selected-day-total { text-align: left; }
     }
+
+    .auth-screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 15% 15%, #294966 0, #14283f 48%, #0c1b2d 100%); }
+    .auth-screen[hidden], #app-shell[hidden] { display: none !important; }
+    .auth-card { width: min(440px, 100%); background: #fff; border-radius: 18px; padding: 30px; box-shadow: 0 24px 80px rgba(0,0,0,.28); }
+    .auth-brand { display: flex; align-items: center; gap: 13px; margin-bottom: 22px; }
+    .auth-brand img { width: 62px; height: 52px; object-fit: contain; background: #f7f9fc; border-radius: 8px; padding: 4px; }
+    .auth-brand strong { display: block; color: var(--navy); font-size: .9rem; line-height: 1.35; }
+    .auth-brand span { display: block; color: var(--muted); font-size: .76rem; margin-top: 4px; }
+    .auth-card h1 { font-size: 1.45rem; margin: 0 0 6px; }
+    .auth-intro { color: var(--muted); margin: 0 0 22px; font-size: .86rem; line-height: 1.5; }
+    .auth-form { display: grid; gap: 13px; }
+    .auth-form[hidden] { display: none !important; }
+    .auth-form label { display: grid; gap: 6px; color: #405168; font-weight: 750; font-size: .78rem; }
+    .auth-form input, .auth-form select { min-height: 43px; border: 1px solid #d7e0ea; border-radius: 8px; padding: 10px 11px; color: var(--ink); background: #fff; width: 100%; }
+    .auth-form input:focus { outline: none; border-color: #76a8db; box-shadow: 0 0 0 3px rgba(52,120,189,.12); }
+    .auth-form .btn { width: 100%; margin-top: 5px; }
+    .auth-message { min-height: 20px; margin: 11px 0 0; color: #b83232; font-size: .78rem; line-height: 1.45; }
+    .auth-footnote { margin: 15px 0 0; color: #8895a6; font-size: .7rem; line-height: 1.5; }
+    .header-user { display: flex; flex-direction: column; line-height: 1.3; }
+    .header-user strong { color: #fff; font-size: .77rem; }
+    .header-user span { color: #bdcbd9; font-size: .67rem; }
+    .header-logout { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); color: #e4edf7; border-radius: 8px; padding: 8px 10px; font-size: .75rem; font-weight: 700; }
+    .header-logout:hover { background: rgba(255,255,255,.16); }
+    .admin-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 16px; }
+    .admin-panel { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; min-width: 0; }
+    .admin-panel h2 { font-size: 1rem; color: var(--navy); margin: 0 0 7px; }
+    .admin-panel > p { color: var(--muted); font-size: .77rem; line-height: 1.5; margin: 0 0 15px; }
+    .admin-form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+    .admin-form-grid .full { grid-column: 1 / -1; }
+    .admin-table-wrap { overflow-x: auto; }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: .74rem; }
+    .admin-table th, .admin-table td { border-bottom: 1px solid #edf1f5; padding: 9px 8px; text-align: left; vertical-align: top; }
+    .admin-table th { color: #79869a; font-size: .67rem; text-transform: uppercase; letter-spacing: .04em; }
+    .admin-table td { color: #43536a; }
+    .admin-table input, .admin-table select { border: 1px solid #d8e1eb; border-radius: 6px; padding: 6px; min-height: 32px; max-width: 130px; }
+    .admin-table .btn { min-height: 30px; padding: 5px 8px; font-size: .68rem; }
+    .admin-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .role-pill { display: inline-flex; border-radius: 30px; padding: 4px 8px; background: #edf3fa; color: #385675; font-weight: 800; font-size: .66rem; white-space: nowrap; }
+    .admin-empty { color: #8b98a8; text-align: center; padding: 20px; font-size: .75rem; }
+    @media (max-width: 900px) { .admin-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) { .header-user { display: none; } .header-logout { margin-left: 2px; } }
+    @media (max-width: 480px) { .auth-card { padding: 23px 19px; } .admin-form-grid { grid-template-columns: 1fr; } .admin-form-grid .full { grid-column: auto; } }
   </style>
 </head>
 <body>
+  <section class="auth-screen" id="auth-screen" aria-label="Acesso ao sistema">
+    <div class="auth-card">
+      <div class="auth-brand"><img src="/logo-eurolatina.jpeg" alt="EUROLATINA"><div><strong>METALÚRGICA USINAGEM EUROLATINA</strong><span>Gestão financeira · Acesso seguro</span></div></div>
+      <h1 id="auth-title">Entrar no sistema</h1>
+      <p class="auth-intro" id="auth-intro">Informe suas credenciais para acessar o Dashboard e a Agenda Financeira.</p>
+      <form class="auth-form" id="login-form">
+        <label>E-mail<input id="login-email" type="email" autocomplete="username" required maxlength="180" placeholder="nome@empresa.com.br"></label>
+        <label>Senha<input id="login-password" type="password" autocomplete="current-password" required maxlength="128" placeholder="Sua senha"></label>
+        <button class="btn btn-primary" type="submit" id="login-submit"><i class="fa-solid fa-right-to-bracket"></i> Entrar</button>
+      </form>
+      <form class="auth-form" id="setup-form" hidden>
+        <label>Token inicial de configuração<input id="setup-token" type="password" autocomplete="off" required placeholder="Token INITIAL_ADMIN_SETUP_TOKEN"></label>
+        <label>Nome do administrador<input id="setup-name" type="text" autocomplete="name" required minlength="2" maxlength="100"></label>
+        <label>E-mail<input id="setup-email" type="email" autocomplete="email" required maxlength="180"></label>
+        <label>Senha (mínimo 12 caracteres)<input id="setup-password" type="password" autocomplete="new-password" required minlength="12" maxlength="128"></label>
+        <button class="btn btn-primary" type="submit" id="setup-submit"><i class="fa-solid fa-user-shield"></i> Criar administrador</button>
+      </form>
+      <p class="auth-message" id="auth-message" role="alert"></p>
+      <p class="auth-footnote" id="auth-footnote">Acesso individual. Não compartilhe sua senha.</p>
+    </div>
+  </section>
+  <div id="app-shell" hidden>
   <header class="app-header">
     <div class="brand">
       <img src="/logo-eurolatina.jpeg" alt="Logotipo da Eurolatina">
       <div class="brand-copy">
         <strong>METALÚRGICA USINAGEM EUROLATINA</strong>
-        <span>Gestão financeira · Contas a pagar</span>
+        <span>Gestão financeira · Contas a pagar e a receber</span>
       </div>
     </div>
     <nav class="main-nav" aria-label="Navegação principal">
       <button class="nav-button active" id="nav-dashboard" type="button" onclick="navegarPara('dashboard')" aria-current="page"><i class="fa-solid fa-chart-line"></i> Dashboard</button>
       <button class="nav-button" id="nav-contas" type="button" onclick="navegarPara('contas')"><i class="fa-regular fa-calendar-days"></i> Agenda</button>
+      <button class="nav-button" id="nav-admin" type="button" onclick="navegarPara('admin')" hidden><i class="fa-solid fa-user-shield"></i> Administração</button>
     </nav>
     <div class="header-right">
       <span class="header-date" id="header-date"></span>
+      <span class="header-user"><strong id="header-user-name">Usuário</strong><span id="header-user-role">Perfil</span></span>
+      <button class="header-logout" type="button" onclick="sairDoSistema()" title="Encerrar sessão"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
       <span class="header-symbol" aria-hidden="true"><i class="fa-solid fa-industry"></i></span>
     </div>
   </header>
@@ -346,34 +418,34 @@
         <div>
           <p class="eyebrow">EUROLATINA / Gestão financeira</p>
           <h1>Dashboard financeiro</h1>
-          <p class="page-subtitle">Visão geral das obrigações financeiras e dos compromissos com fornecedores.</p>
+          <p class="page-subtitle">Visão consolidada dos valores a pagar e a receber da empresa.</p>
         </div>
         <div class="page-heading-actions">
           <div class="today-label"><i class="fa-regular fa-calendar"></i> <span id="today-dashboard"></span></div>
-          <button class="btn btn-primary" type="button" onclick="abrirCadastroPelaDashboard()"><i class="fa-solid fa-plus"></i> Nova conta</button>
+          <button class="btn btn-primary" id="dashboard-new-account" type="button" onclick="abrirCadastroPelaDashboard()"><i class="fa-solid fa-plus"></i> Nova conta</button>
         </div>
       </section>
 
       <section class="stats-grid" aria-label="Indicadores financeiros">
         <article class="stat-card">
-          <div class="stat-top"><span>Total em aberto</span><span class="stat-icon blue"><i class="fa-solid fa-wallet"></i></span></div>
-          <div class="stat-value" id="stat-open">R$ 0,00</div>
-          <div class="stat-foot" id="stat-open-foot">0 contas pendentes</div>
+          <div class="stat-top"><span>A pagar em aberto</span><span class="stat-icon blue"><i class="fa-solid fa-arrow-up-from-bracket"></i></span></div>
+          <div class="stat-value" id="stat-payable-open">R$ 0,00</div>
+          <div class="stat-foot" id="stat-payable-open-foot">0 contas a pagar pendentes</div>
         </article>
         <article class="stat-card">
-          <div class="stat-top"><span>Contas vencidas</span><span class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></span></div>
-          <div class="stat-value" id="stat-overdue">R$ 0,00</div>
-          <div class="stat-foot" id="stat-overdue-foot">0 contas em atraso</div>
+          <div class="stat-top"><span>A receber em aberto</span><span class="stat-icon green"><i class="fa-solid fa-arrow-down-to-bracket"></i></span></div>
+          <div class="stat-value" id="stat-receivable-open">R$ 0,00</div>
+          <div class="stat-foot" id="stat-receivable-open-foot">0 contas a receber pendentes</div>
         </article>
         <article class="stat-card">
-          <div class="stat-top"><span>Próximos 7 dias</span><span class="stat-icon yellow"><i class="fa-regular fa-clock"></i></span></div>
-          <div class="stat-value" id="stat-week">R$ 0,00</div>
-          <div class="stat-foot">Vencimentos de hoje até 7 dias</div>
+          <div class="stat-top"><span>A pagar vencidas</span><span class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></span></div>
+          <div class="stat-value" id="stat-payable-overdue">R$ 0,00</div>
+          <div class="stat-foot" id="stat-payable-overdue-foot">0 contas a pagar em atraso</div>
         </article>
         <article class="stat-card">
-          <div class="stat-top"><span>Liquidadas no mês</span><span class="stat-icon green"><i class="fa-solid fa-circle-check"></i></span></div>
-          <div class="stat-value" id="stat-paid">R$ 0,00</div>
-          <div class="stat-foot" id="stat-paid-foot">0 pagamentos registrados</div>
+          <div class="stat-top"><span>A receber vencidas</span><span class="stat-icon yellow"><i class="fa-solid fa-clock"></i></span></div>
+          <div class="stat-value" id="stat-receivable-overdue">R$ 0,00</div>
+          <div class="stat-foot" id="stat-receivable-overdue-foot">0 contas a receber em atraso</div>
         </article>
       </section>
 
@@ -383,13 +455,13 @@
             <h2><i class="fa-solid fa-calendar-check"></i> Agenda de vencimentos</h2>
             <button class="dashboard-link" type="button" onclick="navegarPara('contas')">Abrir agenda <i class="fa-solid fa-arrow-right"></i></button>
           </div>
-          <p class="panel-subtitle">Compromissos em aberto organizados por urgência.</p>
+          <p class="panel-subtitle">Contas a pagar e a receber organizadas por urgência.</p>
           <div class="urgency-list" id="dashboard-urgency"></div>
         </article>
 
         <article class="dashboard-panel">
-          <div class="dashboard-panel-header"><h2><i class="fa-solid fa-chart-pie"></i> Despesas por categoria</h2></div>
-          <p class="panel-subtitle">Distribuição dos valores atualmente em aberto.</p>
+          <div class="dashboard-panel-header"><h2><i class="fa-solid fa-chart-pie"></i> Contas a pagar por categoria</h2></div>
+          <p class="panel-subtitle">Distribuição dos valores a pagar atualmente em aberto.</p>
           <div class="category-list" id="dashboard-categories"></div>
         </article>
 
@@ -398,10 +470,10 @@
             <h2><i class="fa-solid fa-clock-rotate-left"></i> Contas recentes</h2>
             <button class="dashboard-link" type="button" onclick="navegarPara('contas')">Abrir agenda <i class="fa-solid fa-arrow-right"></i></button>
           </div>
-          <p class="panel-subtitle">Últimos lançamentos registrados no financeiro da EUROLATINA.</p>
+          <p class="panel-subtitle">Últimos lançamentos a pagar e a receber registrados no financeiro da EUROLATINA.</p>
           <div class="recent-table-wrap">
             <table class="recent-table">
-              <thead><tr><th>Fornecedor</th><th>Vencimento</th><th>Status</th><th style="text-align:right">Valor</th></tr></thead>
+              <thead><tr><th>Fornecedor / cliente</th><th>Tipo</th><th>Previsão</th><th>Status</th><th style="text-align:right">Valor</th></tr></thead>
               <tbody id="dashboard-recent"></tbody>
             </table>
           </div>
@@ -415,24 +487,32 @@
         <div>
           <p class="eyebrow">Financeiro / Obrigações</p>
           <h1>Agenda de contas</h1>
-          <p class="page-subtitle">Visualize os vencimentos mês a mês e acompanhe os pagamentos dos fornecedores.</p>
+          <p class="page-subtitle">Visualize os vencimentos mês a mês e acompanhe pagamentos a fornecedores e recebimentos de clientes.</p>
         </div>
         <div class="today-label"><i class="fa-regular fa-calendar"></i> <span id="today-contas"></span></div>
       </section>
 
-      <section class="toolbar" aria-label="Filtros das contas">
+      <section class="toolbar" aria-label="Filtros das contas a pagar e a receber">
         <div class="filters">
           <label class="search-wrap">
             <span class="visually-hidden">Buscar conta</span>
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input class="field-control" id="filter-search" type="search" placeholder="Fornecedor, descrição ou documento..." autocomplete="off">
+            <input class="field-control" id="filter-search" type="search" placeholder="Fornecedor, cliente, descrição ou documento..." autocomplete="off">
+          </label>
+          <label>
+            <span class="visually-hidden">Tipo de conta</span>
+            <select class="field-control" id="filter-type" aria-label="Tipo de conta">
+              <option value="todos">Pagar e receber</option>
+              <option value="pagar">A pagar</option>
+              <option value="receber">A receber</option>
+            </select>
           </label>
           <label>
             <span class="visually-hidden">Status</span>
             <select class="field-control" id="filter-status">
               <option value="todos">Todos os status</option>
               <option value="pendente">Em aberto</option>
-              <option value="liquidada">Liquidadas</option>
+              <option value="liquidada">Pagas / recebidas</option>
             </select>
           </label>
           <label>
@@ -447,6 +527,11 @@
               <option>Fretes e logística</option>
               <option>Impostos e taxas</option>
               <option>Despesas administrativas</option>
+              <option>Faturamento de usinagem</option>
+              <option>Venda de peças e componentes</option>
+              <option>Venda de materiais</option>
+              <option>Adiantamentos de clientes</option>
+              <option>Outros recebimentos</option>
               <option>Outros</option>
             </select>
           </label>
@@ -455,7 +540,7 @@
         </div>
         <div class="toolbar-actions">
           <button class="btn btn-secondary" type="button" onclick="limparFiltros()" title="Limpar filtros"><i class="fa-solid fa-filter-circle-xmark"></i><span>Limpar</span></button>
-          <button class="btn btn-primary" type="button" onclick="abrirModalNova()"><i class="fa-solid fa-plus"></i><span>Nova conta</span></button>
+          <button class="btn btn-primary" id="agenda-new-account" type="button" onclick="abrirModalNova()"><i class="fa-solid fa-plus"></i><span>Nova conta</span></button>
         </div>
       </section>
 
@@ -470,16 +555,20 @@
           <span class="calendar-summary-icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>
         </article>
         <article class="calendar-summary-card">
-          <div><span class="calendar-summary-label">Em aberto no mês</span><strong class="calendar-summary-value" id="calendar-month-open">R$ 0,00</strong></div>
-          <span class="calendar-summary-icon"><i class="fa-solid fa-wallet"></i></span>
+          <div><span class="calendar-summary-label">Em aberto a pagar</span><strong class="calendar-summary-value" id="calendar-month-payable-open">R$ 0,00</strong></div>
+          <span class="calendar-summary-icon"><i class="fa-solid fa-arrow-up-from-bracket"></i></span>
+        </article>
+        <article class="calendar-summary-card receivable">
+          <div><span class="calendar-summary-label">Em aberto a receber</span><strong class="calendar-summary-value" id="calendar-month-receivable-open">R$ 0,00</strong></div>
+          <span class="calendar-summary-icon"><i class="fa-solid fa-arrow-down-to-bracket"></i></span>
         </article>
         <article class="calendar-summary-card paid">
-          <div><span class="calendar-summary-label">Liquidadas no mês</span><strong class="calendar-summary-value" id="calendar-month-paid">R$ 0,00</strong></div>
+          <div><span class="calendar-summary-label">Pagas / recebidas no mês</span><strong class="calendar-summary-value" id="calendar-month-paid">R$ 0,00</strong></div>
           <span class="calendar-summary-icon"><i class="fa-solid fa-circle-check"></i></span>
         </article>
       </section>
 
-      <section class="calendar-layout" aria-label="Agenda mensal de contas a pagar">
+      <section class="calendar-layout" aria-label="Agenda mensal de contas a pagar e a receber">
         <div class="calendar-panel">
           <div class="calendar-toolbar">
             <h2 class="calendar-month-title" id="calendar-month-title">Mês / Ano</h2>
@@ -497,7 +586,7 @@
             <span class="legend-item"><i class="legend-dot overdue"></i> Vencida</span>
             <span class="legend-item"><i class="legend-dot today"></i> Vence hoje</span>
             <span class="legend-item"><i class="legend-dot upcoming"></i> A vencer</span>
-            <span class="legend-item"><i class="legend-dot paid"></i> Liquidada</span>
+            <span class="legend-item"><i class="legend-dot paid"></i> Paga / recebida</span>
           </div>
         </div>
 
@@ -512,6 +601,32 @@
         </aside>
       </section>
     </section>
+
+    <!-- TELA 3: ADMINISTRAÇÃO E SEGURANÇA -->
+    <section class="screen-view" id="view-admin" hidden>
+      <section class="page-heading">
+        <div><p class="eyebrow">Segurança / Governança</p><h1>Administração</h1><p class="page-subtitle">Gerencie os usuários, os perfis de acesso e a trilha de auditoria da EUROLATINA.</p></div>
+      </section>
+      <div class="admin-layout">
+        <section class="admin-panel">
+          <h2><i class="fa-solid fa-users-gear"></i> Usuários e permissões</h2>
+          <p>Cadastre usuários individuais. As permissões são verificadas no servidor a cada operação.</p>
+          <form id="new-user-form" class="admin-form-grid">
+            <label class="form-group"><span>Nome</span><input class="form-control" id="new-user-name" required minlength="2" maxlength="100"></label>
+            <label class="form-group"><span>E-mail</span><input class="form-control" id="new-user-email" type="email" required maxlength="180"></label>
+            <label class="form-group"><span>Senha inicial (mínimo 12 caracteres)</span><input class="form-control" id="new-user-password" type="password" required minlength="12" maxlength="128"></label>
+            <label class="form-group"><span>Perfil</span><select class="form-control" id="new-user-role"><option value="consulta">Consulta (somente leitura)</option><option value="financeiro">Financeiro (contas e documentos)</option><option value="admin">Administrador (acesso total)</option></select></label>
+            <div class="full"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-user-plus"></i> Criar usuário</button></div>
+          </form>
+          <div class="admin-table-wrap" style="margin-top:18px"><table class="admin-table"><thead><tr><th>Usuário</th><th>Perfil / Estado</th><th>Ações</th></tr></thead><tbody id="admin-users-table"><tr><td colspan="3" class="admin-empty">Carregando usuários...</td></tr></tbody></table></div>
+        </section>
+        <section class="admin-panel" style="grid-column:1 / -1">
+          <h2><i class="fa-solid fa-clipboard-list"></i> Trilha de auditoria</h2>
+          <p>Registro cronológico de logins, alterações em contas a pagar e a receber, recebimentos, pagamentos, exclusões, gestão de usuários e acesso a documentos.</p>
+          <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Data / hora</th><th>Usuário</th><th>Ação</th><th>Alvo</th><th>Detalhes</th></tr></thead><tbody id="admin-audit-table"><tr><td colspan="5" class="admin-empty">Carregando eventos...</td></tr></tbody></table></div>
+        </section>
+      </div>
+    </section>
   </main>
 
   <footer class="app-footer">
@@ -524,14 +639,21 @@
   <div class="modal-overlay" id="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
     <div class="modal">
       <div class="modal-header">
-        <div><h2 id="account-modal-title">Cadastrar conta</h2><p>Preencha os dados da obrigação financeira.</p></div>
+        <div><h2 id="account-modal-title">Cadastrar conta</h2><p>Preencha os dados da conta a pagar ou a receber.</p></div>
         <button class="modal-close" type="button" aria-label="Fechar" onclick="fecharModal()"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
         <form id="account-form" onsubmit="salvarConta(event)">
           <div class="form-grid">
-            <div class="form-group full">
-              <label for="supplier">Fornecedor *</label>
+            <div class="form-group">
+              <label for="account-type">Tipo de conta *</label>
+              <select class="form-control" id="account-type" name="tipo" required>
+                <option value="pagar">Conta a pagar</option>
+                <option value="receber">Conta a receber</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="supplier" id="supplier-label">Fornecedor *</label>
               <input class="form-control" id="supplier" name="fornecedor" maxlength="120" placeholder="Ex.: Aços e Metais Sorocaba Ltda." required>
             </div>
             <div class="form-group">
@@ -553,6 +675,11 @@
                 <option>Fretes e logística</option>
                 <option>Impostos e taxas</option>
                 <option>Despesas administrativas</option>
+                <option>Faturamento de usinagem</option>
+                <option>Venda de peças e componentes</option>
+                <option>Venda de materiais</option>
+                <option>Adiantamentos de clientes</option>
+                <option>Outros recebimentos</option>
                 <option selected>Outros</option>
               </select>
             </div>
@@ -576,6 +703,7 @@
   </div>
 
   <input class="visually-hidden" type="file" id="attachment-input" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx,application/pdf,image/jpeg,image/png,image/webp">
+  </div>
   <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
 
   <script>
@@ -585,7 +713,7 @@
     const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     const dateFormatter = new Intl.DateTimeFormat('pt-BR');
     const monthFormatter = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
-    const state = { contas: [], editingId: null, attachmentAccountId: null, loading: false, activeScreen: 'dashboard', calendarMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1), selectedDate: localISODate() };
+    const state = { contas: [], user: null, editingId: null, attachmentAccountId: null, loading: false, activeScreen: 'dashboard', calendarMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1), selectedDate: localISODate() };
 
     function localISODate(date = new Date()) {
       const year = date.getFullYear();
@@ -616,11 +744,122 @@
       window.setTimeout(() => toast.remove(), 4200);
     }
     async function apiRequest(url, options = {}) {
-      const response = await fetch(url, options);
+      const response = await fetch(url, { credentials: 'same-origin', ...options });
       const contentType = response.headers.get('content-type') || '';
       const payload = contentType.includes('application/json') ? await response.json() : null;
+      if (response.status === 401 && !String(url).includes('/api/auth/')) {
+        state.user = null;
+        mostrarAutenticacao('login', 'Sua sessão expirou. Entre novamente.');
+      }
       if (!response.ok) throw new Error(payload?.error || `Não foi possível concluir a operação (${response.status}).`);
       return payload;
+    }
+
+    function podeEscrever() { return ['admin', 'financeiro'].includes(state.user?.role); }
+    function podeAcessarDocumentos() { return ['admin', 'financeiro'].includes(state.user?.role); }
+    function mostrarAutenticacao(mode = 'login', message = '') {
+      document.getElementById('auth-screen').hidden = false;
+      document.getElementById('app-shell').hidden = true;
+      document.getElementById('login-form').hidden = mode !== 'login';
+      document.getElementById('setup-form').hidden = mode !== 'setup';
+      document.getElementById('auth-title').textContent = mode === 'setup' ? 'Configuração inicial' : 'Entrar no sistema';
+      document.getElementById('auth-intro').textContent = mode === 'setup'
+        ? 'Crie a primeira conta de administrador. O cadastro inicial só pode ser realizado uma vez.'
+        : 'Informe suas credenciais individuais para acessar o financeiro da EUROLATINA.';
+      document.getElementById('auth-message').textContent = message;
+      if (mode === 'setup') {
+        document.getElementById('auth-footnote').textContent = 'Após criar o administrador, remova INITIAL_ADMIN_SETUP_TOKEN das variáveis do Vercel e faça um novo deploy.';
+        document.getElementById('setup-name').focus();
+      } else {
+        document.getElementById('auth-footnote').textContent = 'Acesso individual. Não compartilhe sua senha.';
+        document.getElementById('login-email').focus();
+      }
+    }
+
+    function aplicarPermissoesNaInterface() {
+      const user = state.user;
+      document.getElementById('header-user-name').textContent = user?.nome || '';
+      document.getElementById('header-user-role').textContent = user?.role_label || '';
+      document.getElementById('nav-admin').hidden = user?.role !== 'admin';
+      document.getElementById('dashboard-new-account').hidden = !podeEscrever();
+      document.getElementById('agenda-new-account').hidden = !podeEscrever();
+    }
+
+    async function abrirAplicacao(user) {
+      state.user = user;
+      document.getElementById('auth-screen').hidden = true;
+      document.getElementById('app-shell').hidden = false;
+      aplicarPermissoesNaInterface();
+      configurarEventos();
+      atualizarDataCabecalho();
+      let initialScreen = window.location.hash.replace('#', '') || 'dashboard';
+      if (initialScreen === 'admin' && state.user.role !== 'admin') initialScreen = 'dashboard';
+      aplicarTela(initialScreen);
+      if (!window.location.hash) window.history.replaceState({ screen: initialScreen }, '', `#${initialScreen}`);
+      await carregarContas();
+    }
+
+    async function iniciarAplicacao() {
+      try {
+        const status = await apiRequest('/api/auth/status');
+        if (status.setupRequired) {
+          mostrarAutenticacao('setup', status.setupEnabled ? '' : 'Configure INITIAL_ADMIN_SETUP_TOKEN nas variáveis de ambiente do Vercel antes de criar o primeiro administrador.');
+          document.getElementById('setup-submit').disabled = !status.setupEnabled;
+          return;
+        }
+        if (status.authenticated && status.user) return abrirAplicacao(status.user);
+        mostrarAutenticacao('login');
+      } catch (error) {
+        mostrarAutenticacao('login', `Não foi possível conectar ao servidor: ${error.message}`);
+      }
+    }
+
+    async function entrarNoSistema(event) {
+      event.preventDefault();
+      const button = document.getElementById('login-submit');
+      button.disabled = true;
+      document.getElementById('auth-message').textContent = '';
+      try {
+        const result = await apiRequest('/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: document.getElementById('login-email').value.trim(), password: document.getElementById('login-password').value })
+        });
+        document.getElementById('login-form').reset();
+        await abrirAplicacao(result.user);
+      } catch (error) {
+        document.getElementById('auth-message').textContent = error.message;
+      } finally { button.disabled = false; }
+    }
+
+    async function configurarAdministradorInicial(event) {
+      event.preventDefault();
+      const button = document.getElementById('setup-submit');
+      button.disabled = true;
+      document.getElementById('auth-message').textContent = '';
+      try {
+        const result = await apiRequest('/api/auth/setup', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            setupToken: document.getElementById('setup-token').value,
+            nome: document.getElementById('setup-name').value.trim(),
+            email: document.getElementById('setup-email').value.trim(),
+            password: document.getElementById('setup-password').value
+          })
+        });
+        document.getElementById('setup-form').reset();
+        await abrirAplicacao(result.user);
+        showToast('Administrador inicial criado. Remova INITIAL_ADMIN_SETUP_TOKEN do Vercel e faça novo deploy.');
+      } catch (error) {
+        document.getElementById('auth-message').textContent = error.message;
+      } finally { button.disabled = false; }
+    }
+
+    async function sairDoSistema() {
+      try { await apiRequest('/api/auth/logout', { method: 'POST' }); }
+      catch (error) { showToast(error.message, 'error'); }
+      state.user = null;
+      state.contas = [];
+      mostrarAutenticacao('login', 'Sessão encerrada.');
     }
     function setLoading(active) {
       state.loading = active;
@@ -642,6 +881,7 @@
     }
     function obterContasFiltradas() {
       const search = document.getElementById('filter-search').value.trim().toLocaleLowerCase('pt-BR');
+      const type = document.getElementById('filter-type').value;
       const status = document.getElementById('filter-status').value;
       const category = document.getElementById('filter-category').value;
       const from = document.getElementById('filter-from').value;
@@ -649,6 +889,7 @@
       return state.contas.filter((account) => {
         const searchable = [account.fornecedor, account.descricao, account.numero_documento].join(' ').toLocaleLowerCase('pt-BR');
         if (search && !searchable.includes(search)) return false;
+        if (type !== 'todos' && (account.tipo || 'pagar') !== type) return false;
         if (status !== 'todos' && account.status !== status) return false;
         if (category !== 'todas' && (account.categoria || 'Outros') !== category) return false;
         if (from && account.data_vencimento < from) return false;
@@ -658,41 +899,24 @@
     }
     function renderizar() {
       const today = localISODate();
-      const limit = localISODate(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 7));
-      let openTotal = 0, overdueTotal = 0, paidMonthTotal = 0, openCount = 0, overdueCount = 0, paidMonthCount = 0;
-      const monthPrefix = today.slice(0, 7);
-
-      // Indicadores consolidados: usam todas as contas, sem depender dos filtros da Agenda.
-      for (const account of state.contas) {
-        const isPaid = account.status === 'liquidada';
-        const value = Number(account.valor) || 0;
-        if (isPaid) {
-          if ((account.data_liquidacao || '').startsWith(monthPrefix)) {
-            paidMonthTotal += value;
-            paidMonthCount += 1;
-          }
-        } else {
-          openTotal += value;
-          openCount += 1;
-          if (account.data_vencimento < today) {
-            overdueTotal += value;
-            overdueCount += 1;
-          }
-        }
-      }
-
-      setText('stat-open', money.format(openTotal));
-      setText('stat-open-foot', `${openCount} ${openCount === 1 ? 'conta pendente' : 'contas pendentes'}`);
-      setText('stat-overdue', money.format(overdueTotal));
-      setText('stat-overdue-foot', `${overdueCount} ${overdueCount === 1 ? 'conta em atraso' : 'contas em atraso'}`);
-      setText('stat-week', money.format(state.contas.filter((account) => account.status !== 'liquidada' && account.data_vencimento >= today && account.data_vencimento <= limit).reduce((sum, account) => sum + (Number(account.valor) || 0), 0)));
-      setText('stat-paid', money.format(paidMonthTotal));
-      setText('stat-paid-foot', `${paidMonthCount} ${paidMonthCount === 1 ? 'pagamento registrado' : 'pagamentos registrados'} em ${monthFormatter.format(new Date())}`);
+      const payableOpen = state.contas.filter((a) => (a.tipo || 'pagar') === 'pagar' && a.status !== 'liquidada');
+      const receivableOpen = state.contas.filter((a) => a.tipo === 'receber' && a.status !== 'liquidada');
+      const payableOverdue = payableOpen.filter((a) => a.data_vencimento < today);
+      const receivableOverdue = receivableOpen.filter((a) => a.data_vencimento < today);
+      const sum = (items) => items.reduce((total, account) => total + (Number(account.valor) || 0), 0);
+      setText('stat-payable-open', money.format(sum(payableOpen)));
+      setText('stat-payable-open-foot', `${payableOpen.length} ${payableOpen.length === 1 ? 'conta a pagar pendente' : 'contas a pagar pendentes'}`);
+      setText('stat-receivable-open', money.format(sum(receivableOpen)));
+      setText('stat-receivable-open-foot', `${receivableOpen.length} ${receivableOpen.length === 1 ? 'conta a receber pendente' : 'contas a receber pendentes'}`);
+      setText('stat-payable-overdue', money.format(sum(payableOverdue)));
+      setText('stat-payable-overdue-foot', `${payableOverdue.length} ${payableOverdue.length === 1 ? 'conta a pagar vencida' : 'contas a pagar vencidas'}`);
+      setText('stat-receivable-overdue', money.format(sum(receivableOverdue)));
+      setText('stat-receivable-overdue-foot', `${receivableOverdue.length} ${receivableOverdue.length === 1 ? 'conta a receber vencida' : 'contas a receber vencidas'}`);
 
       const filteredAccounts = obterContasFiltradas();
       setText('result-count', `${filteredAccounts.length} ${filteredAccounts.length === 1 ? 'conta encontrada' : 'contas encontradas'}`);
       renderizarCalendario(filteredAccounts);
-      renderizarDashboard(today, limit);
+      renderizarDashboard(today, localISODate(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 7)));
     }
 
     function formatMonth(date) {
@@ -743,28 +967,33 @@
       for (const list of byDate.values()) list.sort((a, b) => (a.status === b.status ? (Number(a.id) - Number(b.id)) : a.status === 'pendente' ? -1 : 1));
 
       const monthAccounts = accounts.filter((account) => String(account.data_vencimento || '').startsWith(monthKey));
-      const monthOpen = monthAccounts.filter((account) => account.status !== 'liquidada');
-      const monthPaid = monthAccounts.filter((account) => account.status === 'liquidada');
+      const monthPayableOpen = monthAccounts.filter((account) => (account.tipo || 'pagar') === 'pagar' && account.status !== 'liquidada');
+      const monthReceivableOpen = monthAccounts.filter((account) => account.tipo === 'receber' && account.status !== 'liquidada');
+      const monthPaid = accounts.filter((account) => account.status === 'liquidada' && String(account.data_liquidacao || '').startsWith(monthKey));
       const sum = (items) => items.reduce((total, account) => total + (Number(account.valor) || 0), 0);
 
       setText('calendar-month-title', formatMonth(month));
       setText('calendar-month-count', monthAccounts.length.toLocaleString('pt-BR'));
-      setText('calendar-month-open', money.format(sum(monthOpen)));
+      setText('calendar-month-payable-open', money.format(sum(monthPayableOpen)));
+      setText('calendar-month-receivable-open', money.format(sum(monthReceivableOpen)));
       setText('calendar-month-paid', money.format(sum(monthPaid)));
 
       const grid = document.getElementById('calendar-grid');
       grid.innerHTML = visibleDays.map(({ date, iso, inMonth }) => {
         const dayAccounts = byDate.get(iso) || [];
         const openForDay = dayAccounts.filter((account) => account.status !== 'liquidada');
-        const dayTotal = sum(openForDay);
+        const dayPayable = openForDay.filter((account) => (account.tipo || 'pagar') === 'pagar');
+        const dayReceivable = openForDay.filter((account) => account.tipo === 'receber');
         const eventLabels = dayAccounts.slice(0, 3).map((account) => {
           const paid = account.status === 'liquidada';
           const eventClass = paid ? 'paid' : iso < today ? 'overdue' : iso === today ? 'today' : 'upcoming';
-          const label = `${account.fornecedor} · ${money.format(Number(account.valor) || 0)}`;
-          return `<span class="day-event ${eventClass}" title="${escapeHtml(label)}">${escapeHtml(account.fornecedor)}</span>`;
+          const type = account.tipo === 'receber' ? 'receivable' : 'payable';
+          const marker = type === 'receivable' ? '↓' : '↑';
+          const label = `${type === 'receivable' ? 'A receber' : 'A pagar'}: ${account.fornecedor} · ${money.format(Number(account.valor) || 0)}`;
+          return `<span class="day-event ${eventClass} ${type}" title="${escapeHtml(label)}">${marker} ${escapeHtml(account.fornecedor)}</span>`;
         }).join('');
         const remaining = dayAccounts.length > 3 ? `<span class="day-more">+${dayAccounts.length - 3} mais</span>` : '';
-        const totalLabel = openForDay.length ? `<span class="day-total">${money.format(dayTotal)}</span>` : '';
+        const totalLabel = openForDay.length ? `<span class="day-total">↑ ${money.format(sum(dayPayable))} · ↓ ${money.format(sum(dayReceivable))}</span>` : '';
         const classes = ['calendar-day', inMonth ? '' : 'outside', iso === today ? 'today' : '', iso === state.selectedDate ? 'selected' : ''].filter(Boolean).join(' ');
         const aria = `${dateFormatter.format(date)}: ${dayAccounts.length} ${dayAccounts.length === 1 ? 'conta' : 'contas'}`;
         return `<button type="button" class="${classes}" role="gridcell" aria-label="${escapeHtml(aria)}" aria-pressed="${iso === state.selectedDate}" onclick="selecionarDia('${iso}')"><span class="day-number">${date.getDate()}</span><span class="day-events">${eventLabels}${remaining}</span>${totalLabel}</button>`;
@@ -777,28 +1006,34 @@
       const date = dateFromISO(selectedDate);
       setText('selected-day-title', date ? `Contas de ${new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).format(date)}` : 'Contas do dia');
       const pending = accounts.filter((account) => account.status !== 'liquidada');
-      const pendingTotal = pending.reduce((sum, account) => sum + (Number(account.valor) || 0), 0);
-      const paidTotal = accounts.filter((account) => account.status === 'liquidada').reduce((sum, account) => sum + (Number(account.valor) || 0), 0);
-      setText('selected-day-total', money.format(pendingTotal));
-      setText('selected-day-count', `${accounts.length} ${accounts.length === 1 ? 'conta' : 'contas'} · ${money.format(paidTotal)} pagos`);
-      setText('selected-day-subtitle', `${pending.length} em aberto · ${accounts.length - pending.length} liquidadas`);
+      const pendingPayable = pending.filter((account) => (account.tipo || 'pagar') === 'pagar');
+      const pendingReceivable = pending.filter((account) => account.tipo === 'receber');
+      const sum = (items) => items.reduce((total, account) => total + (Number(account.valor) || 0), 0);
+      const paid = accounts.filter((account) => account.status === 'liquidada');
+      setText('selected-day-total', `↑ ${money.format(sum(pendingPayable))}  ↓ ${money.format(sum(pendingReceivable))}`);
+      setText('selected-day-count', `${accounts.length} ${accounts.length === 1 ? 'conta' : 'contas'}`);
+      setText('selected-day-subtitle', `${pendingPayable.length} a pagar · ${pendingReceivable.length} a receber · ${paid.length} concluídas`);
       renderList('selected-day-list', accounts, 'Nenhuma conta com vencimento nesta data.');
     }
 
     function renderizarDashboard(today, limit) {
       const openAccounts = state.contas.filter((account) => account.status !== 'liquidada');
-      const overdue = openAccounts.filter((account) => account.data_vencimento < today);
-      const dueToday = openAccounts.filter((account) => account.data_vencimento === today);
-      const upcoming = openAccounts.filter((account) => account.data_vencimento > today && account.data_vencimento <= limit);
+      const payable = openAccounts.filter((account) => (account.tipo || 'pagar') === 'pagar');
+      const receivable = openAccounts.filter((account) => account.tipo === 'receber');
+      const groups = [];
+      for (const [type, accounts] of [['pagar', payable], ['receber', receivable]]) {
+        const verb = type === 'pagar' ? 'a pagar' : 'a receber';
+        groups.push(
+          { key: `overdue-${type}`, label: `Vencidas ${verb}`, items: accounts.filter((a) => a.data_vencimento < today) },
+          { key: `today-${type}`, label: `Vencem hoje ${verb}`, items: accounts.filter((a) => a.data_vencimento === today) },
+          { key: `week-${type}`, label: `Próximos 7 dias ${verb}`, items: accounts.filter((a) => a.data_vencimento > today && a.data_vencimento <= limit) }
+        );
+      }
       const sum = (items) => items.reduce((total, account) => total + (Number(account.valor) || 0), 0);
-      document.getElementById('dashboard-urgency').innerHTML = [
-        { key: 'overdue', label: 'Vencidas', items: overdue, value: sum(overdue) },
-        { key: 'today', label: 'Vencem hoje', items: dueToday, value: sum(dueToday) },
-        { key: 'week', label: 'Próximos 7 dias', items: upcoming, value: sum(upcoming) }
-      ].map((item) => `<div class="urgency-item ${item.key}"><div class="urgency-label"><span class="urgency-dot"></span>${item.label}</div><div class="urgency-metrics"><strong>${money.format(item.value)}</strong><span>${item.items.length} ${item.items.length === 1 ? 'conta' : 'contas'}</span></div></div>`).join('');
+      document.getElementById('dashboard-urgency').innerHTML = groups.map((item) => `<div class="urgency-item ${item.key}"><div class="urgency-label"><span class="urgency-dot"></span>${item.label}</div><div class="urgency-metrics"><strong>${money.format(sum(item.items))}</strong><span>${item.items.length} ${item.items.length === 1 ? 'conta' : 'contas'}</span></div></div>`).join('');
 
       const categories = new Map();
-      for (const account of openAccounts) {
+      for (const account of payable) {
         const label = account.categoria || 'Outros';
         categories.set(label, (categories.get(label) || 0) + (Number(account.valor) || 0));
       }
@@ -806,7 +1041,7 @@
       const maxCategory = Math.max(1, ...categoryEntries.map((entry) => entry[1]));
       document.getElementById('dashboard-categories').innerHTML = categoryEntries.length
         ? categoryEntries.map(([label, value]) => `<div class="category-row"><span class="category-name" title="${escapeHtml(label)}">${escapeHtml(label)}</span><div class="category-track"><div class="category-fill" style="width:${Math.max(2, (value / maxCategory) * 100)}%"></div></div><span class="category-value">${money.format(value)}</span></div>`).join('')
-        : '<div class="dashboard-empty"><i class="fa-solid fa-chart-pie"></i>Nenhuma despesa em aberto para exibir.</div>';
+        : '<div class="dashboard-empty"><i class="fa-solid fa-chart-pie"></i>Nenhuma conta a pagar em aberto para exibir.</div>';
 
       const recent = [...state.contas].sort((a, b) => {
         const dateA = String(a.data_criacao || '').slice(0, 10);
@@ -816,20 +1051,25 @@
       document.getElementById('dashboard-recent').innerHTML = recent.length
         ? recent.map((account) => {
             const paid = account.status === 'liquidada';
-            return `<tr><td>${escapeHtml(account.fornecedor)}</td><td>${formatDate(account.data_vencimento)}</td><td><span class="recent-status ${paid ? 'paid' : ''}">${paid ? 'Liquidada' : 'Em aberto'}</span></td><td class="recent-value">${money.format(Number(account.valor) || 0)}</td></tr>`;
+            const isReceivable = account.tipo === 'receber';
+            const typeLabel = isReceivable ? 'A receber' : 'A pagar';
+            const statusLabel = paid ? (isReceivable ? 'Recebida' : 'Paga') : 'Em aberto';
+            return `<tr><td>${escapeHtml(account.fornecedor)}</td><td>${typeLabel}</td><td>${formatDate(account.data_vencimento)}</td><td><span class="recent-status ${paid ? 'paid' : ''}">${statusLabel}</span></td><td class="recent-value">${money.format(Number(account.valor) || 0)}</td></tr>`;
           }).join('')
-        : '<tr><td colspan="4"><div class="dashboard-empty"><i class="fa-regular fa-folder-open"></i>Nenhuma conta cadastrada até o momento.</div></td></tr>';
+        : '<tr><td colspan="5"><div class="dashboard-empty"><i class="fa-regular fa-folder-open"></i>Nenhuma conta cadastrada até o momento.</div></td></tr>';
     }
     function aplicarTela(screen) {
-      const selected = screen === 'contas' ? 'contas' : 'dashboard';
+      let selected = ['dashboard', 'contas', 'admin'].includes(screen) ? screen : 'dashboard';
+      if (selected === 'admin' && state.user?.role !== 'admin') selected = 'dashboard';
       state.activeScreen = selected;
-      document.getElementById('view-dashboard').hidden = selected !== 'dashboard';
-      document.getElementById('view-contas').hidden = selected !== 'contas';
-      document.getElementById('nav-dashboard').classList.toggle('active', selected === 'dashboard');
-      document.getElementById('nav-contas').classList.toggle('active', selected === 'contas');
-      document.getElementById('nav-dashboard').setAttribute('aria-current', selected === 'dashboard' ? 'page' : 'false');
-      document.getElementById('nav-contas').setAttribute('aria-current', selected === 'contas' ? 'page' : 'false');
-      document.title = `${selected === 'dashboard' ? 'Dashboard' : 'Agenda de contas'} | Metalúrgica Usinagem EUROLATINA`;
+      for (const name of ['dashboard', 'contas', 'admin']) {
+        document.getElementById(`view-${name}`).hidden = selected !== name;
+        const button = document.getElementById(`nav-${name}`);
+        button.classList.toggle('active', selected === name);
+        button.setAttribute('aria-current', selected === name ? 'page' : 'false');
+      }
+      document.title = `${selected === 'dashboard' ? 'Dashboard' : selected === 'contas' ? 'Agenda de contas' : 'Administração'} | Metalúrgica Usinagem EUROLATINA`;
+      if (selected === 'admin') carregarAdministracao();
     }
     function navegarPara(screen) {
       aplicarTela(screen);
@@ -855,26 +1095,30 @@
       const paid = account.status === 'liquidada';
       const today = localISODate();
       const dueClass = account.data_vencimento < today ? 'overdue' : account.data_vencimento === today ? 'due-today' : 'upcoming';
+      const isReceivable = account.tipo === 'receber';
+      const typeLabel = isReceivable ? 'A receber' : 'A pagar';
+      const completionLabel = isReceivable ? 'Recebida' : 'Paga';
       const statusTag = paid
-        ? `<span class="tag paid-tag"><i class="fa-solid fa-check"></i> Liquidada${account.data_liquidacao ? ` · ${formatDate(account.data_liquidacao)}` : ''}</span>`
+        ? `<span class="tag paid-tag"><i class="fa-solid fa-check"></i> ${completionLabel}${account.data_liquidacao ? ` · ${formatDate(account.data_liquidacao)}` : ''}</span>`
         : account.data_vencimento < today
           ? '<span class="tag overdue-tag">Em atraso</span>'
           : account.data_vencimento === today
             ? '<span class="tag today-tag">Vence hoje</span>'
             : '<span class="tag">Pendente</span>';
-      const attachment = account.anexo_arquivo
+      const attachment = !podeAcessarDocumentos() ? '' : account.anexo_arquivo
         ? `<a class="attachment-link" href="${API_URL}/${id}/anexo" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> ${escapeHtml(account.anexo_nome || 'Ver documento')}</a>`
         : '<span class="attachment-link" style="color:#a0aaba"><i class="fa-regular fa-file"></i> Sem anexo</span>';
-      const paymentAction = paid
+      const actionLabel = isReceivable ? 'Registrar recebimento' : 'Registrar pagamento';
+      const paymentAction = !podeEscrever() ? '' : paid
         ? `<button class="icon-btn pay" type="button" title="Reabrir conta" aria-label="Reabrir conta" onclick="alterarStatus(${id}, 'pendente')"><i class="fa-solid fa-rotate-left"></i></button>`
-        : `<button class="icon-btn pay" type="button" title="Liquidar conta" aria-label="Liquidar conta" onclick="alterarStatus(${id}, 'liquidada')"><i class="fa-solid fa-check"></i></button>`;
+        : `<button class="icon-btn pay" type="button" title="${actionLabel}" aria-label="${actionLabel}" onclick="alterarStatus(${id}, 'liquidada')"><i class="fa-solid fa-check"></i></button>`;
       return `
         <article class="account-card ${dueClass} ${paid ? 'paid' : ''}">
           <div class="card-top">
             <div class="supplier-name">${escapeHtml(account.fornecedor)}</div>
-            <span class="due-date" title="Data de vencimento"><i class="fa-regular fa-calendar"></i> ${formatDate(account.data_vencimento)}</span>
+            <span class="due-date" title="${isReceivable ? 'Data prevista para recebimento' : 'Data de vencimento'}"><i class="fa-regular fa-calendar"></i> ${formatDate(account.data_vencimento)}</span>
           </div>
-          <div class="card-meta">${statusTag}<span class="tag">${escapeHtml(account.categoria || 'Outros')}</span></div>
+          <div class="card-meta"><span class="tag ${isReceivable ? 'receivable-tag' : 'payable-tag'}">${typeLabel}</span>${statusTag}<span class="tag">${escapeHtml(account.categoria || 'Outros')}</span></div>
           ${account.descricao ? `<p class="card-description">${escapeHtml(account.descricao)}</p>` : ''}
           ${account.numero_documento ? `<div class="card-reference"><i class="fa-regular fa-file-lines"></i> Documento: ${escapeHtml(account.numero_documento)}</div>` : ''}
           ${account.data_criacao ? `<div class="card-reference"><i class="fa-regular fa-clock"></i> Lançada em: ${formatDate(String(account.data_criacao).slice(0, 10))}</div>` : ''}
@@ -882,19 +1126,20 @@
           <div class="card-bottom">
             ${attachment}
             <div class="card-actions">
-              <button class="icon-btn" type="button" title="Anexar ou substituir documento" aria-label="Anexar documento" onclick="selecionarAnexo(${id})"><i class="fa-solid fa-paperclip"></i></button>
-              ${account.anexo_arquivo ? `<button class="icon-btn delete" type="button" title="Remover documento" aria-label="Remover documento" onclick="removerAnexo(${id})"><i class="fa-regular fa-circle-xmark"></i></button>` : ''}
+              ${podeAcessarDocumentos() ? `<button class="icon-btn" type="button" title="Anexar ou substituir documento" aria-label="Anexar documento" onclick="selecionarAnexo(${id})"><i class="fa-solid fa-paperclip"></i></button>${account.anexo_arquivo ? `<button class="icon-btn delete" type="button" title="Remover documento" aria-label="Remover documento" onclick="removerAnexo(${id})"><i class="fa-regular fa-circle-xmark"></i></button>` : ''}` : ''}
               ${paymentAction}
-              <button class="icon-btn edit" type="button" title="Editar conta" aria-label="Editar conta" onclick="editarConta(${id})"><i class="fa-solid fa-pen"></i></button>
-              <button class="icon-btn delete" type="button" title="Excluir conta" aria-label="Excluir conta" onclick="excluirConta(${id})"><i class="fa-solid fa-trash"></i></button>
+              ${podeEscrever() ? `<button class="icon-btn edit" type="button" title="Editar conta" aria-label="Editar conta" onclick="editarConta(${id})"><i class="fa-solid fa-pen"></i></button><button class="icon-btn delete" type="button" title="Excluir conta" aria-label="Excluir conta" onclick="excluirConta(${id})"><i class="fa-solid fa-trash"></i></button>` : ''}
             </div>
           </div>
         </article>`;
     }
 
     function abrirModalNova() {
+      if (!podeEscrever()) return showToast('Seu perfil permite apenas consulta.', 'error');
       state.editingId = null;
       document.getElementById('account-form').reset();
+      document.getElementById('account-type').value = 'pagar';
+      atualizarRotuloContraparte();
       document.getElementById('account-modal-title').textContent = 'Cadastrar conta';
       document.getElementById('save-account-btn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salvar conta';
       document.getElementById('due-date').value = localISODate();
@@ -902,10 +1147,13 @@
       document.getElementById('supplier').focus();
     }
     function editarConta(id) {
+      if (!podeEscrever()) return showToast('Seu perfil permite apenas consulta.', 'error');
       const account = state.contas.find((item) => Number(item.id) === id);
       if (!account) return showToast('Conta não encontrada na lista atual.', 'error');
       state.editingId = id;
       document.getElementById('account-form').reset();
+      document.getElementById('account-type').value = account.tipo || 'pagar';
+      atualizarRotuloContraparte();
       document.getElementById('supplier').value = account.fornecedor || '';
       document.getElementById('due-date').value = account.data_vencimento || '';
       document.getElementById('amount').value = Number(account.valor || 0).toFixed(2);
@@ -917,6 +1165,14 @@
       document.getElementById('account-modal').classList.add('open');
       document.getElementById('supplier').focus();
     }
+    function atualizarRotuloContraparte() {
+      const isReceivable = document.getElementById('account-type').value === 'receber';
+      document.getElementById('supplier-label').textContent = isReceivable ? 'Cliente / pagador *' : 'Fornecedor *';
+      document.getElementById('supplier').placeholder = isReceivable
+        ? 'Ex.: Cliente Industrial Ltda.'
+        : 'Ex.: Aços e Metais Sorocaba Ltda.';
+    }
+
     function fecharModal() {
       document.getElementById('account-modal').classList.remove('open');
       state.editingId = null;
@@ -926,6 +1182,7 @@
       const button = document.getElementById('save-account-btn');
       const original = button.innerHTML;
       const body = {
+        tipo: document.getElementById('account-type').value,
         fornecedor: document.getElementById('supplier').value.trim(),
         data_vencimento: document.getElementById('due-date').value,
         valor: Number(document.getElementById('amount').value),
@@ -957,22 +1214,26 @@
       }
     }
     async function alterarStatus(id, status) {
+      if (!podeEscrever()) return showToast('Seu perfil permite apenas consulta.', 'error');
       const account = state.contas.find((item) => Number(item.id) === id);
       if (!account) return;
       const liquidando = status === 'liquidada';
+      const isReceivable = account.tipo === 'receber';
+      const actionNoun = isReceivable ? 'recebimento' : 'pagamento';
       const message = liquidando
-        ? `Confirmar a liquidação da conta de ${account.fornecedor}, no valor de ${money.format(account.valor)}?`
+        ? `Confirmar o registro do ${actionNoun} da conta de ${account.fornecedor}, no valor de ${money.format(account.valor)}?`
         : `Reabrir a conta de ${account.fornecedor}? Ela voltará a constar como pendente.`;
       if (!window.confirm(message)) return;
       try {
         await apiRequest(`${API_URL}/${id}`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status })
         });
-        showToast(liquidando ? 'Pagamento registrado com sucesso.' : 'Conta reaberta com sucesso.');
+        showToast(liquidando ? `${isReceivable ? 'Recebimento' : 'Pagamento'} registrado com sucesso.` : 'Conta reaberta com sucesso.');
         await carregarContas();
       } catch (error) { showToast(error.message, 'error'); }
     }
     async function excluirConta(id) {
+      if (!podeEscrever()) return showToast('Seu perfil permite apenas consulta.', 'error');
       const account = state.contas.find((item) => Number(item.id) === id);
       if (!account) return;
       if (!window.confirm(`Excluir a conta de ${account.fornecedor}? Esta ação também removerá o documento anexado e não poderá ser desfeita.`)) return;
@@ -983,6 +1244,7 @@
       } catch (error) { showToast(error.message, 'error'); }
     }
     function selecionarAnexo(id) {
+      if (!podeAcessarDocumentos()) return showToast('Seu perfil não pode acessar documentos.', 'error');
       state.attachmentAccountId = id;
       const input = document.getElementById('attachment-input');
       input.value = '';
@@ -1016,6 +1278,7 @@
       } catch (error) { showToast(error.message, 'error'); }
     }
     async function removerAnexo(id) {
+      if (!podeAcessarDocumentos()) return showToast('Seu perfil não pode acessar documentos.', 'error');
       if (!window.confirm('Deseja remover o documento anexado a esta conta?')) return;
       try {
         await apiRequest(`${API_URL}/${id}/anexo`, { method: 'DELETE' });
@@ -1023,8 +1286,76 @@
         await carregarContas();
       } catch (error) { showToast(error.message, 'error'); }
     }
+    async function carregarAdministracao() {
+      if (state.user?.role !== 'admin') return;
+      try {
+        const [users, audit] = await Promise.all([
+          apiRequest('/api/admin/users'), apiRequest('/api/admin/audit?limit=100')
+        ]);
+        renderizarUsuarios(users);
+        renderizarAuditoria(audit);
+      } catch (error) { showToast(error.message, 'error'); }
+    }
+
+    function renderizarUsuarios(users) {
+      const body = document.getElementById('admin-users-table');
+      if (!users.length) { body.innerHTML = '<tr><td colspan="3" class="admin-empty">Nenhum usuário cadastrado.</td></tr>'; return; }
+      body.innerHTML = users.map((user) => `<tr>
+        <td><strong>${escapeHtml(user.nome)}</strong><br><span>${escapeHtml(user.email)}</span><br><small>${user.last_login_at ? `Último acesso: ${escapeHtml(new Date(user.last_login_at).toLocaleString('pt-BR'))}` : 'Nunca acessou'}</small></td>
+        <td><select id="admin-role-${Number(user.id)}" aria-label="Perfil de ${escapeHtml(user.nome)}"><option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador</option><option value="financeiro" ${user.role === 'financeiro' ? 'selected' : ''}>Financeiro</option><option value="consulta" ${user.role === 'consulta' ? 'selected' : ''}>Consulta</option></select><br><label style="display:inline-flex;align-items:center;gap:5px;margin-top:7px"><input type="checkbox" id="admin-active-${Number(user.id)}" ${user.active ? 'checked' : ''} ${Number(user.id) === Number(state.user.id) ? 'disabled' : ''}> Ativo</label></td>
+        <td><div class="admin-actions"><button class="btn btn-secondary" type="button" onclick="salvarUsuario(${Number(user.id)})">Salvar</button><button class="btn btn-secondary" type="button" onclick="redefinirSenhaUsuario(${Number(user.id)}, '${escapeHtml(user.email).replace(/'/g, '&#39;')}')">Nova senha</button></div></td>
+      </tr>`).join('');
+    }
+
+    function renderizarAuditoria(events) {
+      const body = document.getElementById('admin-audit-table');
+      if (!events.length) { body.innerHTML = '<tr><td colspan="5" class="admin-empty">Nenhum evento registrado.</td></tr>'; return; }
+      body.innerHTML = events.map((event) => {
+        const details = event.metadata && Object.keys(event.metadata).length ? JSON.stringify(event.metadata) : '—';
+        return `<tr><td>${escapeHtml(new Date(event.created_at).toLocaleString('pt-BR'))}</td><td>${escapeHtml(event.actor_email || 'Sistema')}</td><td><span class="role-pill">${escapeHtml(event.action)}</span></td><td>${escapeHtml(event.target_type || '—')} ${escapeHtml(event.target_id || '')}</td><td>${escapeHtml(details)}</td></tr>`;
+      }).join('');
+    }
+
+    async function criarUsuario(event) {
+      event.preventDefault();
+      const body = {
+        nome: document.getElementById('new-user-name').value.trim(),
+        email: document.getElementById('new-user-email').value.trim(),
+        password: document.getElementById('new-user-password').value,
+        role: document.getElementById('new-user-role').value
+      };
+      try {
+        await apiRequest('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        document.getElementById('new-user-form').reset();
+        showToast('Usuário criado com sucesso.');
+        await carregarAdministracao();
+      } catch (error) { showToast(error.message, 'error'); }
+    }
+
+    async function salvarUsuario(id) {
+      const role = document.getElementById(`admin-role-${id}`).value;
+      const active = document.getElementById(`admin-active-${id}`).checked;
+      try {
+        await apiRequest(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role, active }) });
+        showToast('Permissões atualizadas.');
+        await carregarAdministracao();
+      } catch (error) { showToast(error.message, 'error'); }
+    }
+
+    async function redefinirSenhaUsuario(id, email) {
+      const password = window.prompt(`Nova senha para ${email} (mínimo 12 caracteres):`);
+      if (password === null) return;
+      if (password.length < 12 || password.length > 128) return showToast('A senha deve ter entre 12 e 128 caracteres.', 'error');
+      try {
+        await apiRequest(`/api/admin/users/${id}/reset-password`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+        showToast('Senha redefinida. As sessões anteriores foram encerradas.');
+        await carregarAdministracao();
+      } catch (error) { showToast(error.message, 'error'); }
+    }
+
     function limparFiltros() {
       document.getElementById('filter-search').value = '';
+      document.getElementById('filter-type').value = 'todos';
       document.getElementById('filter-status').value = 'todos';
       document.getElementById('filter-category').value = 'todas';
       document.getElementById('filter-from').value = '';
@@ -1032,14 +1363,18 @@
       renderizar();
     }
     let searchTimer;
+    let eventosConfigurados = false;
     function configurarEventos() {
-      for (const id of ['filter-status', 'filter-category', 'filter-from', 'filter-to']) {
+      if (eventosConfigurados) return;
+      eventosConfigurados = true;
+      for (const id of ['filter-type', 'filter-status', 'filter-category', 'filter-from', 'filter-to']) {
         document.getElementById(id).addEventListener('change', renderizar);
       }
       document.getElementById('filter-search').addEventListener('input', () => {
         window.clearTimeout(searchTimer);
         searchTimer = window.setTimeout(renderizar, 180);
       });
+      document.getElementById('account-type').addEventListener('change', atualizarRotuloContraparte);
       document.getElementById('attachment-input').addEventListener('change', (event) => {
         const file = event.target.files?.[0];
         if (file) enviarAnexo(file);
@@ -1059,11 +1394,10 @@
       setText('today-contas', formatted);
     }
     window.addEventListener('popstate', () => aplicarTela(window.location.hash.replace('#', '') || 'dashboard'));
-    configurarEventos();
-    atualizarDataCabecalho();
-    aplicarTela(window.location.hash.replace('#', '') || 'dashboard');
-    if (!window.location.hash) window.history.replaceState({ screen: 'dashboard' }, '', '#dashboard');
-    carregarContas();
+    document.getElementById('login-form').addEventListener('submit', entrarNoSistema);
+    document.getElementById('setup-form').addEventListener('submit', configurarAdministradorInicial);
+    document.getElementById('new-user-form').addEventListener('submit', criarUsuario);
+    iniciarAplicacao();
   </script>
 </body>
 </html>
