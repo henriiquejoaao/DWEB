@@ -1,7 +1,7 @@
 {
   "name": "eurolatina-gestao-financeira",
-  "version": "2.1.1",
-  "description": "Sistema cloud-only EUROLATINA com contas a pagar/receber, autenticação, RBAC, auditoria e normalização correta das linhas Turso.",
+  "version": "2.1.2",
+  "description": "Sistema cloud-only EUROLATINA com contas a pagar/receber, autenticação, RBAC, auditoria e normalização correta das linhas Turso e eventos compatíveis com CSP estrita.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -397,14 +397,14 @@
       </div>
     </div>
     <nav class="main-nav" aria-label="Navegação principal">
-      <button class="nav-button active" id="nav-dashboard" type="button" onclick="navegarPara('dashboard')" aria-current="page"><i class="fa-solid fa-chart-line"></i> Dashboard</button>
-      <button class="nav-button" id="nav-contas" type="button" onclick="navegarPara('contas')"><i class="fa-regular fa-calendar-days"></i> Agenda</button>
-      <button class="nav-button" id="nav-admin" type="button" onclick="navegarPara('admin')" hidden><i class="fa-solid fa-user-shield"></i> Administração</button>
+      <button class="nav-button active" id="nav-dashboard" type="button" data-action="navigate" data-screen="dashboard" aria-current="page"><i class="fa-solid fa-chart-line"></i> Dashboard</button>
+      <button class="nav-button" id="nav-contas" type="button" data-action="navigate" data-screen="contas"><i class="fa-regular fa-calendar-days"></i> Agenda</button>
+      <button class="nav-button" id="nav-admin" type="button" data-action="navigate" data-screen="admin" hidden><i class="fa-solid fa-user-shield"></i> Administração</button>
     </nav>
     <div class="header-right">
       <span class="header-date" id="header-date"></span>
       <span class="header-user"><strong id="header-user-name">Usuário</strong><span id="header-user-role">Perfil</span></span>
-      <button class="header-logout" type="button" onclick="sairDoSistema()" title="Encerrar sessão"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+      <button class="header-logout" type="button" data-action="logout" title="Encerrar sessão"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
       <span class="header-symbol" aria-hidden="true"><i class="fa-solid fa-industry"></i></span>
     </div>
   </header>
@@ -422,7 +422,7 @@
         </div>
         <div class="page-heading-actions">
           <div class="today-label"><i class="fa-regular fa-calendar"></i> <span id="today-dashboard"></span></div>
-          <button class="btn btn-primary" id="dashboard-new-account" type="button" onclick="abrirCadastroPelaDashboard()"><i class="fa-solid fa-plus"></i> Nova conta</button>
+          <button class="btn btn-primary" id="dashboard-new-account" type="button" data-action="new-from-dashboard"><i class="fa-solid fa-plus"></i> Nova conta</button>
         </div>
       </section>
 
@@ -433,7 +433,7 @@
           <div class="stat-foot" id="stat-payable-open-foot">0 contas a pagar pendentes</div>
         </article>
         <article class="stat-card">
-          <div class="stat-top"><span>A receber em aberto</span><span class="stat-icon green"><i class="fa-solid fa-arrow-down-to-bracket"></i></span></div>
+          <div class="stat-top"><span>A receber em aberto</span><span class="stat-icon green"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i></span></div>
           <div class="stat-value" id="stat-receivable-open">R$ 0,00</div>
           <div class="stat-foot" id="stat-receivable-open-foot">0 contas a receber pendentes</div>
         </article>
@@ -453,7 +453,7 @@
         <article class="dashboard-panel">
           <div class="dashboard-panel-header">
             <h2><i class="fa-solid fa-calendar-check"></i> Agenda de vencimentos</h2>
-            <button class="dashboard-link" type="button" onclick="navegarPara('contas')">Abrir agenda <i class="fa-solid fa-arrow-right"></i></button>
+            <button class="dashboard-link" type="button" data-action="navigate" data-screen="contas">Abrir agenda <i class="fa-solid fa-arrow-right"></i></button>
           </div>
           <p class="panel-subtitle">Contas a pagar e a receber organizadas por urgência.</p>
           <div class="urgency-list" id="dashboard-urgency"></div>
@@ -468,7 +468,7 @@
         <article class="dashboard-panel" style="grid-column:1 / -1">
           <div class="dashboard-panel-header">
             <h2><i class="fa-solid fa-clock-rotate-left"></i> Contas recentes</h2>
-            <button class="dashboard-link" type="button" onclick="navegarPara('contas')">Abrir agenda <i class="fa-solid fa-arrow-right"></i></button>
+            <button class="dashboard-link" type="button" data-action="navigate" data-screen="contas">Abrir agenda <i class="fa-solid fa-arrow-right"></i></button>
           </div>
           <p class="panel-subtitle">Últimos lançamentos a pagar e a receber registrados no financeiro da EUROLATINA.</p>
           <div class="recent-table-wrap">
@@ -539,8 +539,8 @@
           <label><span class="visually-hidden">Vencimento até</span><input class="field-control date-filter" id="filter-to" type="date" title="Vencimento até"></label>
         </div>
         <div class="toolbar-actions">
-          <button class="btn btn-secondary" type="button" onclick="limparFiltros()" title="Limpar filtros"><i class="fa-solid fa-filter-circle-xmark"></i><span>Limpar</span></button>
-          <button class="btn btn-primary" id="agenda-new-account" type="button" onclick="abrirModalNova()"><i class="fa-solid fa-plus"></i><span>Nova conta</span></button>
+          <button class="btn btn-secondary" type="button" data-action="clear-filters" title="Limpar filtros"><i class="fa-solid fa-filter-circle-xmark"></i><span>Limpar</span></button>
+          <button class="btn btn-primary" id="agenda-new-account" type="button" data-action="new-account"><i class="fa-solid fa-plus"></i><span>Nova conta</span></button>
         </div>
       </section>
 
@@ -560,7 +560,7 @@
         </article>
         <article class="calendar-summary-card receivable">
           <div><span class="calendar-summary-label">Em aberto a receber</span><strong class="calendar-summary-value" id="calendar-month-receivable-open">R$ 0,00</strong></div>
-          <span class="calendar-summary-icon"><i class="fa-solid fa-arrow-down-to-bracket"></i></span>
+          <span class="calendar-summary-icon"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i></span>
         </article>
         <article class="calendar-summary-card paid">
           <div><span class="calendar-summary-label">Pagas / recebidas no mês</span><strong class="calendar-summary-value" id="calendar-month-paid">R$ 0,00</strong></div>
@@ -573,9 +573,9 @@
           <div class="calendar-toolbar">
             <h2 class="calendar-month-title" id="calendar-month-title">Mês / Ano</h2>
             <div class="calendar-controls">
-              <button class="btn btn-secondary calendar-arrow" type="button" onclick="mudarMes(-1)" aria-label="Mês anterior" title="Mês anterior"><i class="fa-solid fa-chevron-left"></i></button>
-              <button class="btn btn-secondary" type="button" onclick="irParaHoje()"><i class="fa-regular fa-calendar-check"></i> Hoje</button>
-              <button class="btn btn-secondary calendar-arrow" type="button" onclick="mudarMes(1)" aria-label="Próximo mês" title="Próximo mês"><i class="fa-solid fa-chevron-right"></i></button>
+              <button class="btn btn-secondary calendar-arrow" type="button" data-action="change-month" data-offset="-1" aria-label="Mês anterior" title="Mês anterior"><i class="fa-solid fa-chevron-left"></i></button>
+              <button class="btn btn-secondary" type="button" data-action="go-today"><i class="fa-regular fa-calendar-check"></i> Hoje</button>
+              <button class="btn btn-secondary calendar-arrow" type="button" data-action="change-month" data-offset="1" aria-label="Próximo mês" title="Próximo mês"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
           </div>
           <div class="calendar-weekdays" aria-hidden="true">
@@ -640,10 +640,10 @@
     <div class="modal">
       <div class="modal-header">
         <div><h2 id="account-modal-title">Cadastrar conta</h2><p>Preencha os dados da conta a pagar ou a receber.</p></div>
-        <button class="modal-close" type="button" aria-label="Fechar" onclick="fecharModal()"><i class="fa-solid fa-xmark"></i></button>
+        <button class="modal-close" type="button" aria-label="Fechar" data-action="close-modal"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
-        <form id="account-form" onsubmit="salvarConta(event)">
+        <form id="account-form">
           <div class="form-grid">
             <div class="form-group">
               <label for="account-type">Tipo de conta *</label>
@@ -694,7 +694,7 @@
             </div>
           </div>
           <div class="modal-actions">
-            <button class="btn btn-secondary" type="button" onclick="fecharModal()">Cancelar</button>
+            <button class="btn btn-secondary" type="button" data-action="close-modal">Cancelar</button>
             <button class="btn btn-primary" id="save-account-btn" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar conta</button>
           </div>
         </form>
@@ -996,7 +996,7 @@
         const totalLabel = openForDay.length ? `<span class="day-total">↑ ${money.format(sum(dayPayable))} · ↓ ${money.format(sum(dayReceivable))}</span>` : '';
         const classes = ['calendar-day', inMonth ? '' : 'outside', iso === today ? 'today' : '', iso === state.selectedDate ? 'selected' : ''].filter(Boolean).join(' ');
         const aria = `${dateFormatter.format(date)}: ${dayAccounts.length} ${dayAccounts.length === 1 ? 'conta' : 'contas'}`;
-        return `<button type="button" class="${classes}" role="gridcell" aria-label="${escapeHtml(aria)}" aria-pressed="${iso === state.selectedDate}" onclick="selecionarDia('${iso}')"><span class="day-number">${date.getDate()}</span><span class="day-events">${eventLabels}${remaining}</span>${totalLabel}</button>`;
+        return `<button type="button" class="${classes}" role="gridcell" aria-label="${escapeHtml(aria)}" aria-pressed="${iso === state.selectedDate}" data-action="select-day" data-date="${iso}"><span class="day-number">${date.getDate()}</span><span class="day-events">${eventLabels}${remaining}</span>${totalLabel}</button>`;
       }).join('');
 
       renderizarContasDoDia(byDate.get(state.selectedDate) || [], state.selectedDate);
@@ -1110,8 +1110,8 @@
         : '<span class="attachment-link" style="color:#a0aaba"><i class="fa-regular fa-file"></i> Sem anexo</span>';
       const actionLabel = isReceivable ? 'Registrar recebimento' : 'Registrar pagamento';
       const paymentAction = !podeEscrever() ? '' : paid
-        ? `<button class="icon-btn pay" type="button" title="Reabrir conta" aria-label="Reabrir conta" onclick="alterarStatus(${id}, 'pendente')"><i class="fa-solid fa-rotate-left"></i></button>`
-        : `<button class="icon-btn pay" type="button" title="${actionLabel}" aria-label="${actionLabel}" onclick="alterarStatus(${id}, 'liquidada')"><i class="fa-solid fa-check"></i></button>`;
+        ? `<button class="icon-btn pay" type="button" title="Reabrir conta" aria-label="Reabrir conta" data-action="change-status" data-id="${id}" data-status="pendente"><i class="fa-solid fa-rotate-left"></i></button>`
+        : `<button class="icon-btn pay" type="button" title="${actionLabel}" aria-label="${actionLabel}" data-action="change-status" data-id="${id}" data-status="liquidada"><i class="fa-solid fa-check"></i></button>`;
       return `
         <article class="account-card ${dueClass} ${paid ? 'paid' : ''}">
           <div class="card-top">
@@ -1126,9 +1126,9 @@
           <div class="card-bottom">
             ${attachment}
             <div class="card-actions">
-              ${podeAcessarDocumentos() ? `<button class="icon-btn" type="button" title="Anexar ou substituir documento" aria-label="Anexar documento" onclick="selecionarAnexo(${id})"><i class="fa-solid fa-paperclip"></i></button>${account.anexo_arquivo ? `<button class="icon-btn delete" type="button" title="Remover documento" aria-label="Remover documento" onclick="removerAnexo(${id})"><i class="fa-regular fa-circle-xmark"></i></button>` : ''}` : ''}
+              ${podeAcessarDocumentos() ? `<button class="icon-btn" type="button" title="Anexar ou substituir documento" aria-label="Anexar documento" data-action="select-attachment" data-id="${id}"><i class="fa-solid fa-paperclip"></i></button>${account.anexo_arquivo ? `<button class="icon-btn delete" type="button" title="Remover documento" aria-label="Remover documento" data-action="remove-attachment" data-id="${id}"><i class="fa-regular fa-circle-xmark"></i></button>` : ''}` : ''}
               ${paymentAction}
-              ${podeEscrever() ? `<button class="icon-btn edit" type="button" title="Editar conta" aria-label="Editar conta" onclick="editarConta(${id})"><i class="fa-solid fa-pen"></i></button><button class="icon-btn delete" type="button" title="Excluir conta" aria-label="Excluir conta" onclick="excluirConta(${id})"><i class="fa-solid fa-trash"></i></button>` : ''}
+              ${podeEscrever() ? `<button class="icon-btn edit" type="button" title="Editar conta" aria-label="Editar conta" data-action="edit-account" data-id="${id}"><i class="fa-solid fa-pen"></i></button><button class="icon-btn delete" type="button" title="Excluir conta" aria-label="Excluir conta" data-action="delete-account" data-id="${id}"><i class="fa-solid fa-trash"></i></button>` : ''}
             </div>
           </div>
         </article>`;
@@ -1303,7 +1303,7 @@
       body.innerHTML = users.map((user) => `<tr>
         <td><strong>${escapeHtml(user.nome)}</strong><br><span>${escapeHtml(user.email)}</span><br><small>${user.last_login_at ? `Último acesso: ${escapeHtml(new Date(user.last_login_at).toLocaleString('pt-BR'))}` : 'Nunca acessou'}</small></td>
         <td><select id="admin-role-${Number(user.id)}" aria-label="Perfil de ${escapeHtml(user.nome)}"><option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador</option><option value="financeiro" ${user.role === 'financeiro' ? 'selected' : ''}>Financeiro</option><option value="consulta" ${user.role === 'consulta' ? 'selected' : ''}>Consulta</option></select><br><label style="display:inline-flex;align-items:center;gap:5px;margin-top:7px"><input type="checkbox" id="admin-active-${Number(user.id)}" ${user.active ? 'checked' : ''} ${Number(user.id) === Number(state.user.id) ? 'disabled' : ''}> Ativo</label></td>
-        <td><div class="admin-actions"><button class="btn btn-secondary" type="button" onclick="salvarUsuario(${Number(user.id)})">Salvar</button><button class="btn btn-secondary" type="button" onclick="redefinirSenhaUsuario(${Number(user.id)}, '${escapeHtml(user.email).replace(/'/g, '&#39;')}')">Nova senha</button></div></td>
+        <td><div class="admin-actions"><button class="btn btn-secondary" type="button" data-action="save-user" data-id="${Number(user.id)}">Salvar</button><button class="btn btn-secondary" type="button" data-action="reset-user-password" data-id="${Number(user.id)}" data-email="${escapeHtml(user.email)}">Nova senha</button></div></td>
       </tr>`).join('');
     }
 
@@ -1375,6 +1375,32 @@
         searchTimer = window.setTimeout(renderizar, 180);
       });
       document.getElementById('account-type').addEventListener('change', atualizarRotuloContraparte);
+      document.getElementById('account-form').addEventListener('submit', salvarConta);
+      document.addEventListener('click', (event) => {
+        const trigger = event.target.closest('[data-action]');
+        if (!trigger || trigger.disabled) return;
+        const action = trigger.dataset.action;
+        const id = Number(trigger.dataset.id);
+        switch (action) {
+          case 'navigate': navegarPara(trigger.dataset.screen); break;
+          case 'logout': sairDoSistema(); break;
+          case 'new-from-dashboard': abrirCadastroPelaDashboard(); break;
+          case 'new-account': abrirModalNova(); break;
+          case 'clear-filters': limparFiltros(); break;
+          case 'change-month': mudarMes(Number(trigger.dataset.offset)); break;
+          case 'go-today': irParaHoje(); break;
+          case 'close-modal': fecharModal(); break;
+          case 'select-day': selecionarDia(trigger.dataset.date); break;
+          case 'change-status': alterarStatus(id, trigger.dataset.status); break;
+          case 'select-attachment': selecionarAnexo(id); break;
+          case 'remove-attachment': removerAnexo(id); break;
+          case 'edit-account': editarConta(id); break;
+          case 'delete-account': excluirConta(id); break;
+          case 'save-user': salvarUsuario(id); break;
+          case 'reset-user-password': redefinirSenhaUsuario(id, trigger.dataset.email || ''); break;
+          default: break;
+        }
+      });
       document.getElementById('attachment-input').addEventListener('change', (event) => {
         const file = event.target.files?.[0];
         if (file) enviarAnexo(file);

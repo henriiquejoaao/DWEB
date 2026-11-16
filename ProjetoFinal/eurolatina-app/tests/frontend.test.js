@@ -27,13 +27,19 @@ test('interface contém Dashboard e Agenda mensal e o JavaScript é válido', ()
   assert.match(html, /Trilha de auditoria/);
   assert.match(html, /Usuários e permissões/);
   assert.match(html, /function podeEscrever\(\)/);
+  assert.doesNotMatch(html, /\son(click|submit|change|input|keyup|keydown|load)=/i, 'A interface não deve usar handlers inline bloqueados pelo CSP do Helmet');
+  assert.match(html, /data-action=\"navigate\"/);
+  assert.match(html, /data-action=\"change-status\"/);
+  assert.match(html, /addEventListener\('click'/);
+  assert.match(html, /addEventListener\('submit', salvarConta\)/);
+  assert.match(html, /fa-hand-holding-dollar/);
   assert.match(html, /eventosConfigurados/);
   assert.doesNotMatch(html, /Backup e recuperação|baixarBackup/);
   assert.match(html, /id="calendar-grid"/);
   assert.match(html, /id="selected-day-list"/);
-  assert.match(html, /onclick="mudarMes\(-1\)"/);
-  assert.match(html, /onclick="mudarMes\(1\)"/);
-  assert.match(html, /onclick="irParaHoje\(\)"/);
+  assert.match(html, /data-action="change-month" data-offset="-1"/);
+  assert.match(html, /data-action="change-month" data-offset="1"/);
+  assert.match(html, /data-action="go-today"/);
   assert.doesNotMatch(html, /id="list-overdue"|id="list-today"|id="list-week"/);
 
   assert.doesNotThrow(() => new vm.Script(scriptMatch[1]), 'O JavaScript da interface deve ter sintaxe válida');

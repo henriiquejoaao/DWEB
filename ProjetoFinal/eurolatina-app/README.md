@@ -138,3 +138,12 @@ Os testes de interface e de configuração cloud-only não precisam de credencia
 ## Observações
 
 O sistema não integra diretamente com bancos, emissão fiscal ou gateways de pagamento. Pagamentos e recebimentos são marcados manualmente por usuários autorizados. Antes do uso operacional com dados reais, a empresa deve validar os requisitos jurídicos, contábeis e de segurança da sua política interna.
+
+
+## Versão 2.1.2 — correção de interatividade e ícones
+
+- Todos os cliques da interface agora usam delegação de eventos (`data-action`) em vez de atributos `onclick`/`onsubmit`.
+- Compatibilidade com `script-src-attr 'none'` do Helmet: a política CSP continua bloqueando JavaScript inline em atributos HTML.
+- Formulário de contas conectado via `addEventListener('submit', ...)`.
+- Ícone de “A receber em aberto” substituído por `fa-hand-holding-dollar`, ícone Free da família Solid do Font Awesome 6.
+- Nenhuma alteração no schema de dados, nos usuários, nas sessões ou no banco Turso é necessária.
