@@ -18,6 +18,10 @@ test('servidor exige Turso Cloud e não oferece backup nem fallback local', () =
   assert.match(source, /TURSO_DATABASE_URL/);
   assert.match(source, /TURSO_AUTH_TOKEN/);
   assert.match(source, /Turso Cloud/);
+  assert.match(source, /function ensureDatabaseReady/);
+  assert.match(source, /initializeDatabaseWithRetry/);
+  assert.match(source, /databaseReadyPromise = null/);
+  assert.match(source, /conectado: true/);
   assert.doesNotMatch(source, /require\(['"]sqlite3['"]\)/);
   assert.doesNotMatch(source, /database\.sqlite/);
   assert.doesNotMatch(source, /api\/admin\/backup|BACKUP_ENCRYPTION_KEY/);

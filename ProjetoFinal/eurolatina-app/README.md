@@ -32,18 +32,20 @@ O projeto precisa receber estas duas variáveis no ambiente **Production** do Ve
 
 Conecte o banco Turso ao projeto usando o [Turso Cloud Marketplace](https://vercel.com/marketplace/tursocloud/database). Depois confira os nomes em **Settings → Environment Variables** e faça um novo deploy. Os valores devem vir da integração ou do painel Turso; nunca os coloque no código, no Git ou em mensagens.
 
-O endpoint `GET /api/health` informa se a aplicação conseguiu inicializar e acessar o banco remoto:
+O endpoint `GET /api/health` diferencia credenciais presentes (`configurado`) de conexão realmente estabelecida (`conectado`). Falhas transitórias de rede durante a inicialização recebem até três retentativas (quatro tentativas no total); se todas falharem, uma requisição posterior poderá tentar inicializar novamente, sem deixar o erro preso na instância serverless:
 
 ```json
 {
   "status": "ok",
   "aplicacao": "EUROLATINA - Gestão Financeira",
   "banco": "Turso Cloud",
+  "configurado": true,
+  "conectado": true,
   "persistencia": "remota"
 }
 ```
 
-Se responder HTTP 503, consulte a mensagem devolvida e **Deployments → Runtime Logs** no Vercel.
+Se responder HTTP 503, verifique `configurado`, `etapa` e `codigo`, e consulte **Deployments → Runtime Logs** no Vercel. `configurado: true` com `conectado: false` significa que as duas variáveis estão presentes, mas o servidor não conseguiu concluir a conexão/inicialização remota.
 
 ## Primeiro administrador
 

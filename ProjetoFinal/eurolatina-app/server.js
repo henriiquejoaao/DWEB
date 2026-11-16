@@ -259,44 +259,109 @@ async function initializeDatabase() {
   await run('DELETE FROM sessoes WHERE expires_at <= ?', [new Date().toISOString()]);
 }
 
-const databaseReady = (async () => {
-  if (databaseInitError) throw databaseInitError;
-  await initializeDatabase();
-})().catch((error) => {
-  databaseInitError = error;
-  console.error('Falha na inicialização/conexão com o Turso Cloud:', error);
-});
+let databaseReadyPromise = null;
 
-// Diagnóstico explícito: não depende da inicialização do banco para explicar a configuração ausente.
+function databaseErrorCode(error) {
+  return error?.code || error?.cause?.code || error?.cause?.cause?.code || null;
+}
+
+function isRetryableDatabaseError(error) {
+  const code = String(databaseErrorCode(error) || '').toUpperCase();
+  const message = String(error?.message || '').toLowerCase();
+  return [
+    'ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN', 'ENETUNREACH',
+    'ECONNREFUSED', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_SOCKET'
+  ].includes(code) || message.includes('fetch failed') || message.includes('network error');
+}
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function initializeDatabaseWithRetry() {
+  const delays = [300, 900, 1800];
+  let lastError;
+
+  for (let attempt = 0; attempt <= delays.length; attempt += 1) {
+    try {
+      // O SELECT valida rede/autenticação antes de executar as migrações idempotentes.
+      await turso.execute('SELECT 1 AS conectado');
+      await initializeDatabase();
+      await turso.execute('SELECT 1 AS conectado');
+      databaseInitError = null;
+      return;
+    } catch (error) {
+      lastError = error;
+      const retry = attempt < delays.length && isRetryableDatabaseError(error);
+      console.error(
+        `Falha na conexão/inicialização do Turso (tentativa ${attempt + 1}/${delays.length + 1}):`,
+        databaseErrorCode(error) || error.message
+      );
+      if (!retry) break;
+      await wait(delays[attempt]);
+    }
+  }
+
+  throw lastError;
+}
+
+// Inicialização preguiçosa com retentativas. Se uma tentativa esgotar, a promessa
+// é descartada para que a próxima requisição possa tentar novamente (evita erro preso
+// na instância serverless após um timeout transitório).
+async function ensureDatabaseReady() {
+  if (!turso) {
+    throw databaseInitError || new Error('Cliente Turso indisponível.');
+  }
+
+  if (!databaseReadyPromise) {
+    databaseReadyPromise = initializeDatabaseWithRetry().catch((error) => {
+      databaseInitError = error;
+      databaseReadyPromise = null;
+      throw error;
+    });
+  }
+
+  await databaseReadyPromise;
+}
+
+// O status diferencia credenciais presentes de conexão realmente estabelecida.
+// Nenhum token, URL completa ou informação secreta é devolvido ao navegador.
 app.get('/api/health', async (req, res) => {
-  await databaseReady;
-  if (databaseInitError) {
+  const configured = missingDatabaseVariables.length === 0;
+  try {
+    await ensureDatabaseReady();
+    return res.json({
+      status: 'ok',
+      aplicacao: 'EUROLATINA - Gestão Financeira',
+      banco: 'Turso Cloud',
+      configurado: true,
+      conectado: true,
+      persistencia: 'remota'
+    });
+  } catch (error) {
     return res.status(503).json({
       status: 'error',
       banco: 'Turso Cloud',
-      configurado: false,
-      erro: databaseInitError.message
+      configurado: configured,
+      conectado: false,
+      etapa: configured ? 'conexao_ou_inicializacao' : 'configuracao',
+      codigo: databaseErrorCode(error),
+      erro: error.message || 'Falha desconhecida ao conectar ao banco remoto.'
     });
   }
-  return res.json({
-    status: 'ok',
-    aplicacao: 'EUROLATINA - Gestão Financeira',
-    banco: 'Turso Cloud',
-    persistencia: 'remota'
-  });
 });
 
 // Todas as rotas da API dependem do banco remoto e respeitam origem same-site.
 app.use('/api', async (req, res, next) => {
   res.setHeader('Cache-Control', 'private, no-store');
   try {
-    await databaseReady;
-    if (databaseInitError) {
-      return res.status(503).json({ error: databaseInitError.message, banco: 'Turso Cloud' });
-    }
+    await ensureDatabaseReady();
     return next();
   } catch (error) {
-    return next(error);
+    return res.status(503).json({
+      error: 'Não foi possível conectar ao banco de dados remoto.',
+      banco: 'Turso Cloud',
+      configurado: missingDatabaseVariables.length === 0,
+      codigo: databaseErrorCode(error)
+    });
   }
 });
 
@@ -885,12 +950,7 @@ app.use((error, req, res, next) => {
 // A aplicação Express é exportada para o Vercel. O listen() é usado apenas no modo local,
 // mas também exige as credenciais do mesmo banco Turso: não existe fallback para SQLite.
 if (require.main === module) {
-  databaseReady.then(() => {
-    if (databaseInitError) {
-      console.error('Não foi possível conectar ao banco obrigatório Turso Cloud:', databaseInitError.message);
-      process.exitCode = 1;
-      return;
-    }
+  ensureDatabaseReady().then(() => {
     app.listen(PORT, '0.0.0.0', () => {
       console.log('================================================');
       console.log('  METALÚRGICA USINAGEM EUROLATINA');
@@ -898,6 +958,9 @@ if (require.main === module) {
       console.log('  Banco de dados: Turso Cloud (remoto)');
       console.log('================================================');
     });
+  }).catch((error) => {
+    console.error('Não foi possível conectar ao banco obrigatório Turso Cloud:', error.message);
+    process.exitCode = 1;
   });
 
   process.on('SIGINT', () => turso?.close().finally(() => process.exit(0)));

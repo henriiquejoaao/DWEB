@@ -1,7 +1,7 @@
 {
   "name": "eurolatina-gestao-financeira",
-  "version": "2.0.0",
-  "description": "Sistema cloud-only de gestão financeira da Metalúrgica Usinagem EUROLATINA, com contas a pagar e a receber, autenticação, RBAC e auditoria.",
+  "version": "2.1.0",
+  "description": "Sistema cloud-only EUROLATINA com contas a pagar/receber, autenticação, RBAC, auditoria e inicialização Turso com retry.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
