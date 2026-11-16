@@ -9,6 +9,7 @@ const { promisify } = require('node:util');
 const { gzipSync, gunzipSync } = require('node:zlib');
 const { createClient } = require('@libsql/client');
 const helmet = require('helmet');
+const normalizeTursoRow = require('./lib/normalize-turso-row');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -68,12 +69,6 @@ app.use(helmet({
 }));
 app.use(express.json({ limit: '16mb' }));
 app.use(express.static(PUBLIC_DIR));
-
-function normalizeTursoRow(row, columns) {
-  if (!row) return row;
-  if (typeof row.toJSON === 'function') return row.toJSON();
-  return Object.fromEntries(columns.map((column, index) => [column, row[index]]));
-}
 
 function run(sql, params = []) {
   if (!turso) return Promise.reject(databaseInitError || new Error('Cliente Turso indisponível.'));
@@ -504,8 +499,20 @@ app.use('/api', async (req, res, next) => {
 app.get('/api/auth/status', async (req, res, next) => {
   try {
     const count = await get('SELECT COUNT(*) AS total FROM usuarios');
-    const setupRequired = Number(count?.total || 0) === 0;
-    return res.json({ setupRequired, setupEnabled: Boolean(String(process.env.INITIAL_ADMIN_SETUP_TOKEN || '').trim()), authenticated: Boolean(req.user), user: safeUser(req.user) });
+    const totalUsuarios = Number(count?.total ?? 0);
+    if (!Number.isSafeInteger(totalUsuarios) || totalUsuarios < 0) {
+      throw new Error('Resultado inválido ao consultar a quantidade de usuários no Turso.');
+    }
+    const setupRequired = totalUsuarios === 0;
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.json({
+      setupRequired,
+      setupEnabled: Boolean(String(process.env.INITIAL_ADMIN_SETUP_TOKEN || '').trim()),
+      authenticated: Boolean(req.user),
+      user: safeUser(req.user),
+      // Contagem sem dados pessoais: permite diagnosticar a inicialização sem expor usuários.
+      totalUsuarios
+    });
   } catch (error) { return next(error); }
 });
 

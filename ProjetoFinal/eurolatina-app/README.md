@@ -1,5 +1,7 @@
 # EUROLATINA — Gestão Financeira (cloud-only)
 
+**Versão 2.1.1** — correção na normalização de linhas retornadas pelo Turso e diagnóstico de quantidade de usuários no status de autenticação.
+
 Sistema web da **Metalúrgica Usinagem EUROLATINA**, com Dashboard, Agenda mensal, contas a pagar e a receber, autenticação, controle de acesso por perfil e trilha de auditoria.
 
 ## Arquitetura
@@ -32,7 +34,7 @@ O projeto precisa receber estas duas variáveis no ambiente **Production** do Ve
 
 Conecte o banco Turso ao projeto usando o [Turso Cloud Marketplace](https://vercel.com/marketplace/tursocloud/database). Depois confira os nomes em **Settings → Environment Variables** e faça um novo deploy. Os valores devem vir da integração ou do painel Turso; nunca os coloque no código, no Git ou em mensagens.
 
-O endpoint `GET /api/health` diferencia credenciais presentes (`configurado`) de conexão realmente estabelecida (`conectado`). Falhas transitórias de rede durante a inicialização recebem até três retentativas (quatro tentativas no total); se todas falharem, uma requisição posterior poderá tentar inicializar novamente, sem deixar o erro preso na instância serverless:
+O endpoint `GET /api/auth/status` informa `totalUsuarios` (somente a contagem, sem dados pessoais), além de indicar `setupRequired`. Isso facilita identificar se o servidor está lendo o cadastro de usuários esperado. O endpoint `GET /api/health` diferencia credenciais presentes (`configurado`) de conexão realmente estabelecida (`conectado`). Falhas transitórias de rede durante a inicialização recebem até três retentativas (quatro tentativas no total); se todas falharem, uma requisição posterior poderá tentar inicializar novamente, sem deixar o erro preso na instância serverless:
 
 ```json
 {

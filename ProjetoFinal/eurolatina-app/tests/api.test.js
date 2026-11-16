@@ -7,18 +7,30 @@ const net = require('node:net');
 const path = require('node:path');
 const fs = require('node:fs');
 const { randomUUID } = require('node:crypto');
+const normalizeTursoRow = require('../lib/normalize-turso-row');
 
 const root = path.join(__dirname, '..');
 const configuredTestDatabase = Boolean(
   process.env.TURSO_TEST_DATABASE_URL && process.env.TURSO_TEST_AUTH_TOKEN
 );
 
+test('normaliza linhas Turso sem confundir toJSON posicional com objeto', () => {
+  const row = [3];
+  row.total = 3;
+  row.toJSON = () => [3];
+  assert.deepEqual(normalizeTursoRow(row, ['total']), { total: 3 });
+
+  const namedRow = { total: 7, 0: 7 };
+  assert.deepEqual(normalizeTursoRow(namedRow, ['total']), { total: 7 });
+});
+
 test('servidor exige Turso Cloud e não oferece backup nem fallback local', () => {
   const source = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
   assert.match(source, /TURSO_DATABASE_URL/);
   assert.match(source, /TURSO_AUTH_TOKEN/);
   assert.match(source, /Turso Cloud/);
-  assert.match(source, /function ensureDatabaseReady/);
+  assert.match(source, /normalizeTursoRow/);
+  assert.match(source, /totalUsuarios/);
   assert.match(source, /initializeDatabaseWithRetry/);
   assert.match(source, /databaseReadyPromise = null/);
   assert.match(source, /conectado: true/);
